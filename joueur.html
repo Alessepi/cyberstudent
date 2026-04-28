@@ -265,8 +265,7 @@ let phishVoted = false;
 // Pre-fill room from URL
 const up = new URLSearchParams(window.location.search);
 if (up.get('room')) document.getElementById('room-inp').value = up.get('room').toUpperCase();
-// Show default teams immediately
-renderTeamBtns();
+
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
@@ -577,6 +576,10 @@ function updateSbar() {
   document.getElementById('sb-pts').textContent=myScore+' pts';
 }
 function mod2label(m){return{quiz:'Quiz',phishing:'Phishing',empreinte:'Empreinte',ctf:'CTF',password:'Password'}[m]||m;}
+// Show teams on load
+document.addEventListener("DOMContentLoaded", function(){
+  renderTeamBtns();
+});
 </script>
 </body>
 </html>
