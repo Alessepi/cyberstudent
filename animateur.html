@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cyber Conf — Animateur</title>
-<script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
+<script src="https://unpkg.com/ably@2/ably.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -266,6 +266,15 @@ function initAbly() {
     const {id, name, team} = msg.data;
     players[id] = {name, team:team||null, score:0, correct:0, answered:false};
     updateRightPanel();
+    // Always send current teams to new player
+    if (teamDefs.length === 0) {
+      // Auto-init teams from inputs on first join
+      teamDefs = [0,1,2].map(i => ({
+        name: document.getElementById('tn'+i).value.trim() || ('Équipe '+(i+1)),
+        color: document.getElementById('tc'+i).value
+      }));
+    }
+    channel.publish('host:teams', { teams: getTeamPayload() });
     channel.publish('host:state', {
       phase: quizPhase, teams: getTeamPayload(),
       mod: currentMod, timeLeft: timerLeft
