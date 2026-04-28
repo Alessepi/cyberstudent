@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cyber Conf — Animateur</title>
+<script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#00ff88;--red:#ff4455;--amber:#ffaa00;--blue:#4af;--purple:#cc88ff;
+  --bg:#0a0e14;--bg2:#111620;--bg3:#1a2030;--bg4:#222b3a;
+  --border:rgba(0,255,136,0.12);--border2:rgba(0,255,136,0.28);
+  --text:#e8edf5;--muted:#6b7a8d;
+  --mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans)}
+.app{display:grid;grid-template-rows:52px 1fr;height:100vh}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 16px;flex-shrink:0}
+.logo{font-family:var(--mono);font-size:13px;color:var(--green);letter-spacing:1px}
+.pill{font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid}
+.pill.on{border-color:var(--green);color:var(--green);background:rgba(0,255,136,.08)}
+.pill.off{border-color:var(--red);color:var(--red);background:rgba(255,68,85,.08)}
+.pill.amber{border-color:var(--amber);color:var(--amber);background:rgba(255,170,0,.08)}
+.ml{margin-left:auto}
+.main{display:grid;grid-template-columns:240px 1fr 270px;overflow:hidden;height:100%}
+.panel{background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:4px}
+.panel-r{border-right:none;border-left:1px solid var(--border)}
+.pt{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin:10px 0 6px;padding-top:10px;border-top:1px solid var(--border)}
+.pt:first-child{margin-top:0;padding-top:0;border-top:none}
+.nav-btn{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--muted);border:1px solid transparent;background:none;width:100%;text-align:left;font-family:var(--sans);transition:all .15s}
+.nav-btn:hover{background:var(--bg3);color:var(--text)}
+.nav-btn.active{background:var(--bg3);color:var(--green);border-color:var(--border)}
+.nav-btn .ic{width:18px;text-align:center;flex-shrink:0}
+.center{overflow-y:auto;padding:20px;background:var(--bg)}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:14px}
+.card-title{font-size:16px;font-weight:700;margin-bottom:14px}
+.btn{padding:9px 18px;border-radius:7px;font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;border:1px solid;transition:all .15s}
+.btn-g{background:var(--green);color:#000;border-color:var(--green)}
+.btn-g:hover{opacity:.85}
+.btn-o{background:none;color:var(--text);border-color:var(--border2)}
+.btn-o:hover{background:var(--bg3)}
+.btn-r{background:rgba(255,68,85,.1);color:var(--red);border-color:var(--red)}
+.btn-sm{padding:5px 11px;font-size:11px}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+input[type=text],input[type=number],select,textarea{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-family:var(--sans);font-size:12px;width:100%;outline:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--border2)}
+.flex{display:flex;gap:8px;align-items:center}
+.sl{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.divider{height:1px;background:var(--border);margin:10px 0}
+/* SCOREBOARD */
+.srow{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;background:var(--bg3);margin-bottom:5px}
+.sr-rank{font-family:var(--mono);font-size:11px;color:var(--muted);width:18px}
+.sr-name{flex:1;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sr-pts{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--green)}
+.sr-ok{font-size:10px;color:var(--muted);font-family:var(--mono)}
+/* TIMER */
+.timer-big{font-family:var(--mono);font-size:52px;font-weight:700;text-align:center;margin:10px 0}
+.tbar{height:8px;background:var(--bg4);border-radius:4px;overflow:hidden;margin-bottom:14px}
+.tfill{height:100%;border-radius:4px;transition:width 1s linear,background .5s}
+/* ANSWER BARS */
+.abar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.abar-lbl{width:18px;font-size:12px;font-weight:700;flex-shrink:0}
+.abar-track{flex:1;height:26px;background:var(--bg4);border-radius:5px;overflow:hidden;position:relative}
+.abar-fill{height:100%;border-radius:5px;transition:width .4s;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:700;color:#000}
+.abar-n{font-family:var(--mono);font-size:11px;color:var(--muted);width:24px;text-align:right;flex-shrink:0}
+/* PLAYERS */
+.prow{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:6px;background:var(--bg3);margin-bottom:4px}
+.pdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.pname{font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pteam{font-size:10px;font-family:var(--mono)}
+.ppts{font-family:var(--mono);font-size:11px;font-weight:700}
+/* TEAMS SETUP */
+.team-row-setup{display:flex;gap:6px;align-items:center;margin-bottom:7px}
+.cpick{width:34px;height:30px;border:none;border-radius:5px;cursor:pointer;padding:2px;background:var(--bg4);flex-shrink:0}
+/* QR */
+.qr-box{text-align:center;padding:12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);margin-bottom:10px}
+.qr-url{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:6px;word-break:break-all}
+/* LIVE TEAM SCORES */
+.trow{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;background:var(--bg3);margin-bottom:5px;border-left:3px solid transparent}
+/* PHISHING VOTE */
+.vote-bars{margin-bottom:12px}
+/* PHASE DOTS */
+.pdots{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap}
+.pdot-q{height:4px;flex:1;min-width:4px;border-radius:2px;background:var(--bg4)}
+.pdot-q.done{background:var(--green)}
+.pdot-q.cur{background:var(--amber)}
+
+.toast{position:fixed;bottom:14px;right:14px;background:var(--bg2);border:1px solid var(--green);border-radius:7px;padding:8px 14px;font-size:11px;font-family:var(--mono);color:var(--green);z-index:99;opacity:0;transform:translateY(16px);transition:all .25s}
+.toast.show{opacity:1;transform:translateY(0)}
+.blink{animation:blink 1s step-end infinite}
+@keyframes blink{50%{opacity:0}}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="app">
+  <div class="topbar">
+    <div class="logo">CYBER_CONF<span class="blink">_</span></div>
+    <div class="pill off" id="conn-pill">⬤ Connexion...</div>
+    <div class="pill amber" id="room-pill">Room: —</div>
+    <div id="pcount" style="font-family:var(--mono);font-size:11px;color:var(--muted)">0 joueurs</div>
+    <div class="ml flex">
+      <div class="pill amber" id="phase-pill">lobby</div>
+    </div>
+  </div>
+  <div class="main">
+
+    <!-- LEFT PANEL -->
+    <div class="panel">
+      <div class="pt" style="border-top:none;margin-top:0;padding-top:0">Modules</div>
+      <button class="nav-btn active" id="nb-quiz" onclick="switchMod('quiz')"><span class="ic">❓</span>Quiz / Kahoot</button>
+      <button class="nav-btn" id="nb-phishing" onclick="switchMod('phishing')"><span class="ic">🎣</span>Phishing / Vrai-Fake</button>
+      <button class="nav-btn" id="nb-empreinte" onclick="switchMod('empreinte')"><span class="ic">👣</span>Empreinte Numérique</button>
+      <button class="nav-btn" id="nb-ctf" onclick="switchMod('ctf')"><span class="ic">🚩</span>CTF Initiation</button>
+      <button class="nav-btn" id="nb-password" onclick="switchMod('password')"><span class="ic">🔑</span>Password (démo)</button>
+
+      <div class="pt">Équipes</div>
+      <div class="team-row-setup"><input type="color" class="cpick" id="tc0" value="#ff4455"><input type="text" id="tn0" value="Équipe Rouge"></div>
+      <div class="team-row-setup"><input type="color" class="cpick" id="tc1" value="#4488ff"><input type="text" id="tn1" value="Équipe Bleue"></div>
+      <div class="team-row-setup"><input type="color" class="cpick" id="tc2" value="#00ff88"><input type="text" id="tn2" value="Équipe Verte"></div>
+      <button class="btn btn-g btn-sm" style="width:100%;margin-top:4px" onclick="broadcastTeams()">📡 Envoyer aux joueurs</button>
+      <div id="live-teams" style="margin-top:8px"></div>
+
+      <div class="pt">Quiz — options</div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+        <label style="font-size:11px;color:var(--muted);width:50px;flex-shrink:0">Thème</label>
+        <select id="theme-sel" onchange="applyTheme()" style="font-size:11px">
+          <option value="">Tous</option>
+          <option value="Mots de passe">🔑 Mots de passe</option>
+          <option value="Phishing">🎣 Phishing</option>
+          <option value="Réseaux sociaux">📱 Réseaux sociaux</option>
+          <option value="Cadre légal">⚖️ Cadre légal</option>
+          <option value="Malwares">🦠 Malwares</option>
+          <option value="WiFi & réseau">📡 WiFi & réseau</option>
+          <option value="Bonnes pratiques">✅ Pratiques</option>
+          <option value="IA & Deepfakes">🤖 IA & Deepfakes</option>
+          <option value="Métiers cyber">💼 Métiers</option>
+          <option value="Culture cyber">🌐 Culture</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <label style="font-size:11px;color:var(--muted);width:50px;flex-shrink:0">Timer</label>
+        <select id="timer-sel" style="font-size:11px">
+          <option value="10">10s</option><option value="15" selected>15s</option>
+          <option value="20">20s</option><option value="30">30s</option>
+        </select>
+      </div>
+
+      <div class="pt">Rejoindre</div>
+      <div class="qr-box"><div id="qr-container"></div><div class="qr-url" id="qr-url"></div></div>
+      <button class="btn btn-o btn-sm" style="width:100%" onclick="copyUrl()">📋 Copier le lien</button>
+    </div>
+
+    <!-- CENTER -->
+    <div class="center" id="center"></div>
+
+    <!-- RIGHT PANEL -->
+    <div class="panel panel-r">
+      <div class="pt" style="border-top:none;margin-top:0;padding-top:0">Classement équipes</div>
+      <div id="team-sb"></div>
+      <div class="pt">Joueurs connectés</div>
+      <div id="players-list"></div>
+      <div class="pt">Réponses en direct</div>
+      <div id="live-answers"><div style="font-size:11px;color:var(--muted)">—</div></div>
+      <div class="pt">Scores individuels</div>
+      <div id="indiv-sb"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ABLY_KEY = 'evrpcQ.X7n3VQ:x9AMe7ScSb_lWITGg7KHRUTka7B9ltfMGB0tTiULt9w';
+const ROOM = Math.random().toString(36).substr(2,6).toUpperCase();
+
+// ── QUIZ DATA ──
+const QUIZ = [
+  {theme:"Mots de passe",q:"Longueur minimale recommandée pour un mot de passe sécurisé ?",opts:["6 caractères","8 caractères","12 caractères","20 caractères"],correct:2,expl:"12 caractères minimum. En dessous, cracké en quelques heures avec du matériel moderne."},
+  {theme:"Mots de passe",q:"Que signifie 2FA ?",opts:["Two Factor Application","Two Factor Authentication","Two Firewall Access","Two File Archive"],correct:1,expl:"Authentification à deux facteurs : mot de passe + téléphone/clé physique."},
+  {theme:"Mots de passe",q:"Méthode 2FA la plus sécurisée ?",opts:["SMS","Email","Application TOTP","Question secrète"],correct:2,expl:"TOTP génère des codes localement. SMS vulnérable au SIM swapping."},
+  {theme:"Phishing",q:"% des cyberattaques commençant par du phishing ?",opts:["~30%","~50%",">80%","<20%"],correct:2,expl:"Plus de 80%. Tromper un humain est souvent plus simple que casser un système."},
+  {theme:"Phishing",q:"Qu'est-ce que le spear phishing ?",opts:["Phishing ciblant les pêcheurs","Phishing personnalisé visant une personne précise","Phishing par SMS","Phishing via faux sites"],correct:1,expl:"Ciblé : l'attaquant se renseigne sur la victime pour un message ultra-crédible."},
+  {theme:"Phishing",q:"HTTPS garantit que...",opts:["Le site est légitime","La connexion est chiffrée mais le site peut être frauduleux","Site certifié gouvernement","Aucune donnée volée"],correct:1,expl:"HTTPS chiffre la connexion, ne garantit PAS la légitimité du site."},
+  {theme:"Réseaux sociaux",q:"Qu'est-ce que l'empreinte numérique ?",opts:["Scanner digital","Traces laissées par ton activité en ligne","Profil réseaux sociaux","Historique de navigation"],correct:1,expl:"Tout : historique, posts, likes, localisation, achats... profil très précis."},
+  {theme:"Réseaux sociaux",q:"Qu'est-ce que le doxing ?",opts:["Publier docs entreprise","Collecter et publier infos perso sans consentement","Pirater un compte","Supprimer ses données"],correct:1,expl:"Publier infos personnelles pour nuire. Illégal en France."},
+  {theme:"Cadre légal",q:"Loi française contre l'accès non autorisé à un système ?",opts:["Loi Informatique et Libertés","Loi Godfrain (1988)","RGPD","Loi HADOPI"],correct:1,expl:"Loi Godfrain : jusqu'à 2 ans de prison et 60 000€, même sans modification."},
+  {theme:"Cadre légal",q:"RGPD = ?",opts:["Règlement Général Protection Données","Réseau Global Protection Digitale","Règlement Gestion Programmes Dangereux","Registre Général Personnes Danger"],correct:0,expl:"Règlement européen 2018 sur la protection des données personnelles."},
+  {theme:"Malwares",q:"Qu'est-ce qu'un ransomware ?",opts:["Logiciel espion","Chiffre tes fichiers et demande une rançon","Virus efface disque","Logiciel pub"],correct:1,expl:"Chiffre les fichiers et exige une rançon. WannaCry : 300 000 machines en 2017."},
+  {theme:"Malwares",q:"Faut-il payer la rançon ransomware ?",opts:["Oui, seule solution","Non, jamais — finance les criminels","Oui si données importantes","Seulement si faible montant"],correct:1,expl:"ANSSI : ne jamais payer. 30% des cas, données non récupérées même après paiement."},
+  {theme:"WiFi & réseau",q:"Principal risque d'un Wi-Fi public non chiffré ?",opts:["Wi-Fi plus lent","Interception du trafic (man-in-the-middle)","Batterie se décharge","Sites chargent différemment"],correct:1,expl:"Quelqu'un sur le même réseau peut capturer tout ton trafic avec Wireshark."},
+  {theme:"WiFi & réseau",q:"Qu'est-ce qu'un VPN ?",opts:["Antivirus amélioré","Réseau privé virtuel qui chiffre ta connexion","Pare-feu","Gestionnaire mots de passe"],correct:1,expl:"Chiffre ton trafic. Sur Wi-Fi public, l'attaquant ne voit que données chiffrées."},
+  {theme:"Bonnes pratiques",q:"Tu trouves une clé USB dans la rue. Tu fais quoi ?",opts:["La branches pour voir","La rapportes à la police ou la jettes","La branches sur PC non connecté","La donnes à un ami"],correct:1,expl:"Peut contenir un malware s'installant automatiquement à la connexion."},
+  {theme:"IA & Deepfakes",q:"Qu'est-ce qu'un deepfake ?",opts:["Faux profil","Vidéo/audio falsifié par l'IA","Malware IA","Faux site web"],correct:1,expl:"IA synthétise vidéos/audios de personnes disant des choses qu'elles n'ont jamais dites."},
+  {theme:"Métiers cyber",q:"White hat vs black hat ?",opts:["Couleur équipement","White hat = éthique légal, black hat = malveillant illégal","White = débutant","White = défensif"],correct:1,expl:"White hat : hacker éthique avec autorisation. Black hat : cybercriminel."},
+  {theme:"Culture cyber",q:"WannaCry c'est quoi ?",opts:["Logiciel espion","Ransomware 2017 — 300 000 machines dans 150 pays","Cheval de Troie","Virus efface disques"],correct:1,expl:"Exploitait une faille Windows volée à la NSA. 4 milliards de dégâts."},
+  {theme:"Cyberharcèlement",q:"Que signifie le 3018 ?",opts:["Numéro urgences médicales","Numéro national contre le cyberharcèlement","Signalement contenu illégal","Service police nationale"],correct:1,expl:"3018 : gratuit, anonyme, 7j/7 9h-23h. Pour victimes, parents et professionnels."},
+  {theme:"Cyberharcèlement",q:"Le cyberharcèlement est un délit en France ?",opts:["Non, uniquement civil","Oui — jusqu'à 2 ans et 30 000€","Oui mais seulement si victime mineure","Non si sur réseaux sociaux"],correct:1,expl:"Délit pénal loi 2018. Si victime mineure : 3 ans et 45 000€."},
+];
+
+// ── PHISHING DATA ──
+const PHISHING_CASES = [
+  {id:'p1',type:'phishing',platform:'Email',title:'Mail PayPal suspect',url:'support@paypa1-secure.com',subject:'Votre compte suspendu — Action requise',body:'Cher client, activité inhabituelle détectée. Vérifiez dans les 24h via http://paypa1-secure.com/verify',clues:["Domaine 'paypa1' (1 au lieu de l)","Pas de HTTPS","Urgence artificielle 24h","Formule générique"],isPhish:true,expl:"Phishing. Domaine falsifié, urgence artificielle, lien suspect. PayPal ne contacte jamais ainsi."},
+  {id:'p2',type:'phishing',platform:'Email',title:'Mail Amazon légitime',url:'noreply@amazon.fr',subject:'Commande #405-8832941 expédiée',body:'Bonjour, votre commande #405-8832941 est en route. Livraison demain avant 23h.',clues:["Domaine amazon.fr légitime","HTTPS valide","Numéro de commande précis","Pas d'urgence"],isPhish:false,expl:"Mail légitime. Domaine correct, numéro de commande précis, pas de demande urgente."},
+  {id:'p3',type:'phishing',platform:'Email',title:'Mail impôts frauduleux',url:'direction@impots-gouv-fr.net',subject:'Remboursement fiscal 247,60€',body:'Trop-perçu calculé : 247,60€. Renseignez vos coordonnées bancaires via http://impots-gouv-fr.net — expire dans 72h.',clues:["Faux domaine impots-gouv-fr.net","Demande coordonnées bancaires","Urgence 72h","Vrai site : impots.gouv.fr"],isPhish:true,expl:"Phishing fréquent. Les impôts ne demandent JAMAIS vos coordonnées bancaires par mail."},
+  {id:'vf1',type:'vraifake',platform:'Site web',title:'Faux site Amazon promo',url:'http://amaz0n-promo.fr/iphone-gratuit',content:'FÉLICITATIONS ! iPhone 15 GRATUIT — remplissez le formulaire avec votre numéro de carte (frais 1,99€)',isReal:false,expl:"Arnaque. URL suspecte (amaz0n), pas de HTTPS, promesse irréaliste, demande de carte."},
+  {id:'vf2',type:'vraifake',platform:'Site web',title:'Vrai site service-public.fr',url:'https://www.service-public.fr',content:'Portail officiel de l\'administration française. Carte d\'identité, permis de conduire, impôts...',isReal:true,expl:"Légitime. Domaine .gouv.fr réservé à l'État, HTTPS valide, contenu cohérent."},
+  {id:'vf3',type:'vraifake',platform:'Site web',title:'Faux Netflix (HTTPS mais frauduleux)',url:'https://netf1ix-abonnement.com',content:'Votre abonnement a expiré. Mettez à jour vos informations de paiement : carte, CVV...',isReal:false,expl:"Piège ! HTTPS présent mais domaine frauduleux (netf1ix). HTTPS ne garantit pas la légitimité."},
+];
+
+// ── EMPREINTE DATA ──
+const EMPREINTE_QS = [
+  {q:"Combien de réseaux sociaux utilises-tu ?",opts:[["Aucun",0],["1-2",1],["3-4",2],["5+",3]]},
+  {q:"Ton profil est-il public ou privé ?",opts:[["Tout privé",0],["Mixte",1],["Tout public",2]]},
+  {q:"As-tu déjà utilisé le même mot de passe sur plusieurs sites ?",opts:[["Jamais",0],["Parfois",1],["Souvent",2],["Toujours",3]]},
+  {q:"Tu utilises le 2FA ?",opts:[["Sur tout",0],["Quelques-uns",1],["Jamais",2]]},
+  {q:"Tu utilises des apps de géolocalisation (Snapchat, BeReal...) ?",opts:[["Non",0],["Parfois",1],["Oui, localisation active",2]]},
+];
+
+// ── CTF DATA ──
+const CTF_CHALLENGES = [
+  {id:'c1',tag:'César',pts:100,title:'Le message de César',desc:'Chiffrement César avec décalage inconnu. Retrouve le message original.',code:'FRPSUHQGUH OHV PHQDFHV SRXU SURWHJHU',answer:'COMPRENDRE LES MENACES POUR PROTEGER',hint:'Décale chaque lettre de 3 positions en arrière.',check:v=>v.toUpperCase().replace(/[^A-Z ]/g,'').trim().includes('COMPRENDRE')},
+  {id:'c2',tag:'Binaire',pts:150,title:'La signature binaire',desc:'Decode ce binaire ASCII pour trouver le mot secret.',code:'01000011 01011001 01000010 01000101 01010010',answer:'CYBER',hint:'8 bits = 1 caractère ASCII. 01000011 = 67 = C',check:v=>v.toUpperCase().trim()==='CYBER'},
+  {id:'c3',tag:'Stéganographie',pts:200,title:'Le message caché',desc:'Un message est caché en prenant la première lettre de chaque mot.',code:'Sécurité   Élevée   Contre   Risques   Électroniques   Toujours',answer:'SECRET',hint:'Prends uniquement la première lettre de chaque mot.',check:v=>v.toUpperCase().trim()==='SECRET'},
+  {id:'c4',tag:'Hash MD5',pts:250,title:'Le hash mystère',desc:'Ce hash MD5 correspond à un mot de passe très courant. Lequel ?',code:'5f4dcc3b5aa765d61d8327deb882cf99',answer:'password',hint:'C\'est le mot anglais pour "mot de passe"... le plus utilisé au monde.',check:v=>v.toLowerCase().trim()==='password'},
+  {id:'c5',tag:'Base64',pts:175,title:'Message encodé',desc:'Décode ce Base64.',code:'SGFja2VyIG4nZXN0IHBhcyB1biBjcmltaW5lbA==',answer:'Hacker',hint:'Base64 est un encodage, pas un chiffrement. Utilise un outil de décodage en ligne.',check:v=>v.toLowerCase().includes('hacker')},
+];
+
+// ── STATE ──
+let ably, channel;
+let players = {};
+let teamDefs = [];
+let currentMod = 'quiz';
+let quizQ = [...QUIZ];
+let quizIdx = -1;
+let quizPhase = 'lobby'; // lobby|question|reveal|podium
+let quizAnswers = {};
+let timerInterval = null;
+let timerLeft = 15;
+let timerDur = 15;
+let currentQ = null;
+let phishIdx = 0;
+let phishAnswers = {};
+let empreinteAnswers = new Array(EMPREINTE_QS.length).fill(null);
+let ctfSubmissions = {}; // challengeId -> {playerId -> answer}
+
+// ── ABLY ──
+function initAbly() {
+  ably = new Ably.Realtime({ key: ABLY_KEY });
+  ably.connection.on('connected', () => {
+    document.getElementById('conn-pill').textContent = '⬤ Connecté';
+    document.getElementById('conn-pill').className = 'pill on';
+    document.getElementById('room-pill').textContent = 'Room: ' + ROOM;
+    generateQR();
+    toast('Connecté !');
+  });
+  ably.connection.on('disconnected', () => {
+    document.getElementById('conn-pill').textContent = '⬤ Déconnecté';
+    document.getElementById('conn-pill').className = 'pill off';
+  });
+  channel = ably.channels.get('cyberconf-' + ROOM);
+
+  channel.subscribe('player:join', msg => {
+    const {id, name, team} = msg.data;
+    players[id] = {name, team:team||null, score:0, correct:0, answered:false};
+    updateRightPanel();
+    channel.publish('host:state', {
+      phase: quizPhase, teams: getTeamPayload(),
+      mod: currentMod, timeLeft: timerLeft
+    });
+    toast(name + ' a rejoint !');
+  });
+
+  channel.subscribe('player:leave', msg => {
+    delete players[msg.data.id];
+    updateRightPanel();
+  });
+
+  channel.subscribe('player:answer', msg => {
+    const {id, answer, timeRemaining, mod} = msg.data;
+    if (!players[id]) return;
+    if (mod === 'quiz') {
+      if (quizAnswers[id] !== undefined) return;
+      quizAnswers[id] = answer;
+      players[id].answered = true;
+      if (currentQ && answer === currentQ.correct) {
+        const pts = Math.max(50, Math.round(500 * (timeRemaining / timerDur)));
+        players[id].score += pts;
+        players[id].correct++;
+      }
+      updateLiveAnswers_quiz();
+    } else if (mod === 'phishing') {
+      phishAnswers[id] = answer;
+      updateLiveAnswers_phish();
+    } else if (mod === 'empreinte') {
+      const {qIndex, val} = answer;
+      if (!players[id].empreinte) players[id].empreinte = {};
+      players[id].empreinte[qIndex] = val;
+      updateLiveAnswers_empreinte();
+    } else if (mod === 'ctf') {
+      const {challengeId, text} = answer;
+      if (!ctfSubmissions[challengeId]) ctfSubmissions[challengeId] = {};
+      const ch = CTF_CHALLENGES.find(c=>c.id===challengeId);
+      const correct = ch && ch.check(text);
+      ctfSubmissions[challengeId][id] = {text, correct, name:players[id].name};
+      if (correct) {
+        players[id].score += ch.pts;
+        players[id].correct++;
+        channel.publish('host:ctf_result', {playerId:id, challengeId, correct:true, pts:ch.pts});
+      } else {
+        channel.publish('host:ctf_result', {playerId:id, challengeId, correct:false, pts:0});
+      }
+      updateLiveAnswers_ctf();
+    }
+    updateRightPanel();
+  });
+}
+
+function getTeamPayload() {
+  return teamDefs.map(t => ({
+    name:t.name, color:t.color,
+    count: Object.values(players).filter(p=>p.team===t.name).length
+  }));
+}
+
+// ── QR ──
+function generateQR() {
+  const url = window.location.href.replace('animateur.html','joueur.html') + '?room=' + ROOM;
+  document.getElementById('qr-url').textContent = url;
+  const script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+  script.onload = () => {
+    new QRCode(document.getElementById('qr-container'), {
+      text: url, width:140, height:140,
+      colorDark:'#00ff88', colorLight:'#1a2030',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  };
+  document.head.appendChild(script);
+}
+function copyUrl() {
+  navigator.clipboard.writeText(document.getElementById('qr-url').textContent);
+  toast('Lien copié !');
+}
+
+// ── TEAMS ──
+function broadcastTeams() {
+  teamDefs = [0,1,2].map(i => ({
+    name: document.getElementById('tn'+i).value.trim() || ('Équipe '+(i+1)),
+    color: document.getElementById('tc'+i).value
+  }));
+  channel.publish('host:teams', { teams: getTeamPayload() });
+  updateLiveTeams();
+  updateTeamSB();
+  toast('Équipes envoyées !');
+}
+function updateLiveTeams() {
+  const el = document.getElementById('live-teams');
+  if (!teamDefs.length) { el.innerHTML=''; return; }
+  el.innerHTML = teamDefs.map(t => {
+    const members = Object.values(players).filter(p=>p.team===t.name);
+    const ts = members.reduce((s,p)=>s+p.score,0);
+    return '<div class="trow" style="border-left-color:'+t.color+'"><div style="width:8px;height:8px;border-radius:50%;background:'+t.color+';flex-shrink:0"><\/div><div style="flex:1"><div style="font-size:12px;font-weight:700;color:'+t.color+'">'+t.name+'<\/div><div style="font-size:10px;color:var(--muted)">'+members.length+'👤 '+members.map(p=>p.name).slice(0,3).join(', ')+'<\/div><\/div><div style="font-family:var(--mono);font-size:13px;font-weight:700;color:'+t.color+'">'+ts+'<\/div><\/div>';
+  }).join('');
+}
+function updateTeamSB() {
+  const el = document.getElementById('team-sb');
+  if (!teamDefs.length) { el.innerHTML='<div style="font-size:11px;color:var(--muted)">Envoie les équipes →<\/div>'; return; }
+  const sorted = teamDefs.map(t => {
+    const members = Object.values(players).filter(p=>p.team===t.name);
+    return {name:t.name,color:t.color,total:members.reduce((s,p)=>s+p.score,0),count:members.length};
+  }).sort((a,b)=>b.total-a.total);
+  const r=['🥇','🥈','🥉'];
+  el.innerHTML = sorted.map((t,i)=>'<div class="trow" style="border-left-color:'+t.color+'"><span style="font-size:14px">'+r[i]+'<\/span><span style="font-size:12px;font-weight:700;color:'+t.color+';flex:1">'+t.name+'<\/span><span style="font-size:10px;color:var(--muted)">'+t.count+'👤<\/span><span style="font-family:var(--mono);font-size:13px;color:'+t.color+'">'+t.total+'<\/span><\/div>').join('');
+}
+
+// ── RIGHT PANEL ──
+function updateRightPanel() {
+  updateTeamSB();
+  updateLiveTeams();
+  // Players list
+  const pl = document.getElementById('players-list');
+  const list = Object.values(players);
+  if (!list.length) { pl.innerHTML='<div style="font-size:11px;color:var(--muted)">En attente...<\/div>'; }
+  else {
+    pl.innerHTML = list.map(p => {
+      const t = p.team ? teamDefs.find(x=>x.name===p.team) : null;
+      return '<div class="prow"><div class="pdot" style="background:'+(p.answered?'var(--green)':'var(--muted)')+'"><\/div><div class="pname">'+p.name+'<\/div>'+(t?'<div class="pteam" style="color:'+t.color+'">'+t.name+'<\/div>':'')+' <div class="ppts" style="color:'+(t?t.color:'var(--green)')+'">'+p.score+'<\/div><\/div>';
+    }).join('');
+  }
+  // Individual scoreboard
+  const sb = document.getElementById('indiv-sb');
+  const sorted = [...list].sort((a,b)=>b.score-a.score).slice(0,10);
+  if (!sorted.length) { sb.innerHTML='<div style="font-size:11px;color:var(--muted)">Aucun score<\/div>'; return; }
+  const r=['🥇','🥈','🥉'];
+  sb.innerHTML = sorted.map((p,i)=>{
+    const t = p.team ? teamDefs.find(x=>x.name===p.team) : null;
+    return '<div class="srow"><div class="sr-rank">'+(r[i]||'#'+(i+1))+'<\/div><div class="sr-name" style="'+(t?'color:'+t.color:'')+'">'+p.name+'<\/div><div class="sr-ok">'+p.correct+'✓<\/div><div class="sr-pts" style="'+(t?'color:'+t.color:'')+'">'+p.score+'<\/div><\/div>';
+  }).join('');
+  document.getElementById('pcount').textContent = list.length + ' joueurs';
+}
+
+// ── MODULE SWITCH ──
+function switchMod(mod) {
+  currentMod = mod;
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('nb-'+mod).classList.add('active');
+  document.getElementById('phase-pill').textContent = mod;
+  channel.publish('host:mod_change', { mod });
+  if (mod==='quiz') renderQuizCenter();
+  else if (mod==='phishing') renderPhishCenter();
+  else if (mod==='empreinte') renderEmpreinteCenter();
+  else if (mod==='ctf') renderCTFCenter();
+  else if (mod==='password') renderPasswordCenter();
+  document.getElementById('live-answers').innerHTML = '<div style="font-size:11px;color:var(--muted)">—<\/div>';
+}
+
+// ══════════════════ QUIZ ══════════════════
+function applyTheme() {
+  const t = document.getElementById('theme-sel').value;
+  quizQ = t ? QUIZ.filter(q=>q.theme===t) : [...QUIZ];
+  quizQ = [...quizQ].sort(()=>Math.random()-.5);
+  quizIdx = -1; quizPhase = 'lobby';
+  renderQuizCenter();
+}
+
+function renderQuizCenter() {
+  const c = document.getElementById('center');
+  if (quizPhase==='lobby') {
+    c.innerHTML = `<div class="card"><div class="card-title">❓ Quiz / Kahoot<\/div>
+      <div style="font-size:14px;color:var(--muted);margin-bottom:20px">${quizQ.length} questions · ${Object.keys(players).length} joueur(s)<\/div>
+      <button class="btn btn-g" onclick="startQuiz()" style="font-size:16px;padding:14px 32px">▶ Démarrer<\/button><\/div>`;
+  } else if (quizPhase==='question' && currentQ) {
+    const pct = timerLeft/timerDur*100;
+    const tc = pct>50?'var(--green)':pct>25?'var(--amber)':'var(--red)';
+    const shapes=['▲','◆','●','✖'];
+    const answered = Object.keys(quizAnswers).length;
+    const total = Object.keys(players).length;
+    const dots = quizQ.map((_,i)=>'<div class="pdot-q '+(i<quizIdx?'done':i===quizIdx?'cur':'')+'" style="max-width:20px"><\/div>').join('');
+    c.innerHTML = `<div class="card">
+      <div class="pdots">${dots}<\/div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span style="font-size:10px;font-family:var(--mono);color:var(--amber);padding:2px 8px;border-radius:20px;background:rgba(255,170,0,.1);border:1px solid rgba(255,170,0,.3)">${currentQ.theme}<\/span>
+        <span style="font-size:11px;color:var(--muted);font-family:var(--mono)">Q${quizIdx+1}/${quizQ.length}<\/span>
+        <span style="font-family:var(--mono);font-size:36px;font-weight:700;color:${tc};margin-left:auto" id="tnum">${timerLeft}<\/span>
+      <\/div>
+      <div class="tbar"><div class="tfill" id="tfill" style="width:${pct}%;background:${tc}"><\/div><\/div>
+      <div style="font-size:20px;font-weight:700;margin-bottom:16px;line-height:1.4">${currentQ.q}<\/div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        ${currentQ.opts.map((o,i)=>`<div style="padding:12px;border-radius:8px;border:2px solid ${['#e21b3c','#1368ce','#d89e00','#26890c'][i]};color:${['#e21b3c','#1368ce','#d89e00','#26890c'][i]};background:${['rgba(226,27,60,.08)','rgba(19,104,206,.08)','rgba(216,158,0,.08)','rgba(38,137,12,.08)'][i]};font-size:13px;font-weight:600${i===currentQ.correct?';box-shadow:0 0 0 2px #fff;':''}">${shapes[i]} ${o}</div>`).join('')}
+      <\/div>
+      <div style="font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:12px">${answered}/${total} ont répondu<\/div>
+      <div class="flex">
+        <button class="btn btn-g" onclick="revealQuiz()">✓ Révéler<\/button>
+        <button class="btn btn-o" onclick="clearInterval(timerInterval)">⏸ Stop<\/button>
+      <\/div><\/div>`;
+    updateLiveAnswers_quiz();
+  } else if (quizPhase==='reveal' && currentQ) {
+    const isLast = quizIdx>=quizQ.length-1;
+    const correctCount = Object.values(quizAnswers).filter(a=>a===currentQ.correct).length;
+    c.innerHTML = `<div class="card">
+      <div style="padding:12px 0 8px;color:var(--amber);font-size:11px;font-family:var(--mono)">RÉVÉLATION<\/div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:10px">${currentQ.q}<\/div>
+      <div style="padding:12px;background:rgba(0,255,136,.08);border:1px solid var(--green);border-radius:8px;color:var(--green);font-size:16px;font-weight:700;margin-bottom:10px">✓ ${currentQ.opts[currentQ.correct]}<\/div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.6">${currentQ.expl}<\/div>
+      <div style="font-size:12px;color:var(--amber);font-family:var(--mono);margin-bottom:14px">${correctCount}/${Object.keys(players).length} bonne(s) réponse(s)<\/div>
+      <div class="flex">
+        ${isLast?`<button class="btn btn-g" onclick="showPodium()">🏆 Podium</button>`:`<button class="btn btn-g" onclick="nextQ()">Suivant →</button>`}
+        <button class="btn btn-o" onclick="showPodium()">🏆 Podium<\/button>
+      <\/div><\/div>`;
+  } else if (quizPhase==='podium') {
+    const sorted = Object.values(players).sort((a,b)=>b.score-a.score);
+    const teamSorted = teamDefs.map(t=>{
+      const m=Object.values(players).filter(p=>p.team===t.name);
+      return {name:t.name,color:t.color,total:m.reduce((s,p)=>s+p.score,0)};
+    }).sort((a,b)=>b.total-a.total);
+    const r=['🥇','🥈','🥉'];
+    c.innerHTML = `<div class="card">
+      <div style="font-size:22px;font-weight:800;color:var(--amber);font-family:var(--mono);margin-bottom:16px">🏆 PODIUM FINAL<\/div>
+      ${teamSorted.length?`<div class="sl">classement équipes</div>${teamSorted.map((t,i)=>`<div class="srow" style="border-left:3px solid ${t.color}"><div class="sr-rank">${r[i]}<\/div><div class="sr-name" style="color:${t.color}">${t.name}<\/div><div class="sr-pts" style="color:${t.color}">${t.total}<\/div><\/div>`).join('')}<div class="divider"></div>`:''}
+      <div class="sl">individuel<\/div>
+      ${sorted.slice(0,10).map((p,i)=>{const t=p.team?teamDefs.find(x=>x.name===p.team):null;return `<div class="srow"><div class="sr-rank">${r[i]||'#'+(i+1)}</div><div class="sr-name" style="${t?'color:'+t.color:''}">${p.name}</div><div class="sr-ok">${p.correct}✓</div><div class="sr-pts">${p.score}</div></div>`;}).join('')}
+      <button class="btn btn-o" onclick="resetQuiz()" style="margin-top:14px">↺ Recommencer<\/button>
+      <\/div>`;
+  }
+}
+
+function startQuiz() {
+  quizQ = [...quizQ].sort(()=>Math.random()-.5);
+  quizIdx=-1; quizPhase='question';
+  Object.keys(players).forEach(id=>{players[id].score=0;players[id].correct=0;});
+  nextQ();
+}
+function nextQ() {
+  quizIdx++;
+  if (quizIdx>=quizQ.length) { showPodium(); return; }
+  currentQ = quizQ[quizIdx];
+  quizAnswers = {};
+  quizPhase = 'question';
+  timerDur = parseInt(document.getElementById('timer-sel').value)||15;
+  timerLeft = timerDur;
+  Object.keys(players).forEach(id=>players[id].answered=false);
+  channel.publish('host:question', {
+    index:quizIdx, total:quizQ.length,
+    question:{q:currentQ.q, opts:currentQ.opts, theme:currentQ.theme},
+    timerDuration:timerDur, mod:'quiz'
+  });
+  startTimer();
+  renderQuizCenter();
+  document.getElementById('phase-pill').textContent = 'Q'+(quizIdx+1)+'/'+quizQ.length;
+}
+function startTimer() {
+  clearInterval(timerInterval);
+  timerInterval = setInterval(()=>{
+    timerLeft--;
+    channel.publish('host:tick',{timeLeft:timerLeft});
+    const n=document.getElementById('tnum'), f=document.getElementById('tfill');
+    if (n) {
+      const pct=timerLeft/timerDur*100;
+      const tc=pct>50?'var(--green)':pct>25?'var(--amber)':'var(--red)';
+      n.textContent=timerLeft; n.style.color=tc;
+      if(f){f.style.width=pct+'%';f.style.background=tc;}
+    }
+    if (timerLeft<=0) revealQuiz();
+  },1000);
+}
+function revealQuiz() {
+  if (quizPhase!=='question') return;
+  clearInterval(timerInterval);
+  quizPhase='reveal';
+  channel.publish('host:reveal',{
+    correct:currentQ.correct, correctText:currentQ.opts[currentQ.correct],
+    expl:currentQ.expl, mod:'quiz',
+    scores:Object.fromEntries(Object.entries(players).map(([id,p])=>[id,{score:p.score,correct:p.correct}]))
+  });
+  renderQuizCenter(); updateRightPanel();
+}
+function showPodium() {
+  clearInterval(timerInterval);
+  quizPhase='podium';
+  const sorted=Object.values(players).sort((a,b)=>b.score-a.score);
+  const ts=teamDefs.map(t=>{const m=Object.values(players).filter(p=>p.team===t.name);return{name:t.name,color:t.color,total:m.reduce((s,p)=>s+p.score,0)};}).sort((a,b)=>b.total-a.total);
+  channel.publish('host:podium',{
+    scores:sorted.map(p=>({name:p.name,score:p.score,correct:p.correct,team:p.team||null})),
+    teams:ts, mod:'quiz'
+  });
+  renderQuizCenter(); updateRightPanel();
+  document.getElementById('phase-pill').textContent='podium';
+}
+function resetQuiz() {
+  clearInterval(timerInterval);
+  quizPhase='lobby'; quizIdx=-1; currentQ=null; quizAnswers={};
+  Object.keys(players).forEach(id=>{players[id].score=0;players[id].correct=0;});
+  channel.publish('host:reset',{mod:'quiz'});
+  renderQuizCenter(); updateRightPanel();
+  document.getElementById('phase-pill').textContent='lobby';
+}
+function updateLiveAnswers_quiz() {
+  if (!currentQ) return;
+  const colors=['#e21b3c','#1368ce','#d89e00','#26890c'];
+  const shapes=['▲','◆','●','✖'];
+  const total=Math.max(1,Object.keys(players).length);
+  const counts=[0,0,0,0];
+  Object.values(quizAnswers).forEach(a=>{if(a>=0&&a<4)counts[a]++;});
+  document.getElementById('live-answers').innerHTML = currentQ.opts.map((o,i)=>{
+    const pct=Math.round(counts[i]/total*100);
+    return '<div class="abar-row"><div class="abar-lbl" style="color:'+colors[i]+'">'+shapes[i]+'<\/div><div class="abar-track"><div class="abar-fill" style="width:'+pct+'%;background:'+colors[i]+'">'+(pct>15?pct+'%':'')+'<\/div><\/div><div class="abar-n">'+counts[i]+'<\/div><\/div>';
+  }).join('');
+}
+
+// ══════════════════ PHISHING ══════════════════
+function renderPhishCenter() {
+  const c = document.getElementById('center');
+  const cas = PHISHING_CASES[phishIdx];
+  const dots = PHISHING_CASES.map((_,i)=>'<div class="pdot-q '+(i<phishIdx?'done':i===phishIdx?'cur':'')+'" style="max-width:20px"><\/div>').join('');
+  const isPhish = cas.type==='phishing';
+  c.innerHTML = `<div class="card">
+    <div class="pdots">${dots}<\/div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <span style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:20px;border:1px solid ${isPhish?'var(--red)':'var(--blue)'};color:${isPhish?'var(--red)':'var(--blue)'}">${cas.platform}<\/span>
+      <span style="font-size:14px;font-weight:700">${cas.title}<\/span>
+      <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)">${phishIdx+1}/${PHISHING_CASES.length}<\/span>
+    <\/div>
+    ${isPhish?`
+      <div style="background:var(--bg3);border-radius:8px;overflow:hidden;margin-bottom:14px">
+        <div style="padding:10px 14px;background:var(--bg4);font-size:12px;border-bottom:1px solid var(--border)">
+          <div style="margin-bottom:3px"><span style="color:var(--muted)">De : </span><strong>${cas.url}</strong></div>
+          <div><span style="color:var(--muted)">Objet : </span><strong>${cas.subject}</strong></div>
+        </div>
+        <div style="padding:14px;font-size:13px;line-height:1.7">${cas.body}</div>
+      </div>
+    `:`
+      <div style="background:var(--bg3);border-radius:8px;overflow:hidden;margin-bottom:14px">
+        <div style="padding:7px 12px;background:var(--bg4);font-size:11px;color:var(--muted);font-family:var(--mono);border-bottom:1px solid var(--border)">
+          ${cas.url.startsWith('https')?'🔒':'⚠'} ${cas.url}
+        </div>
+        <div style="padding:14px;font-size:13px">${cas.content}</div>
+      </div>
+    `}
+    <div style="margin-bottom:14px">
+      <div class="sl" style="margin-bottom:6px">indices<\/div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        ${cas.clues?cas.clues.map(cl=>'<div style="font-size:11px;padding:6px 10px;border-radius:5px;background:var(--bg3);border:1px solid var(--border)">'+cl+'<\/div>').join(''):''}
+      <\/div>
+    <\/div>
+    <div class="flex" style="margin-bottom:14px">
+      <button class="btn btn-g" onclick="broadcastPhish()">📡 Envoyer aux joueurs<\/button>
+      <button class="btn btn-o" onclick="revealPhish()">Révéler →<\/button>
+    <\/div>
+    <div id="phish-reveal" style="display:none;padding:12px;border-radius:8px;font-size:13px;line-height:1.6;background:${(isPhish?cas.isPhish:!cas.isReal)?'rgba(255,68,85,.08)':'rgba(0,255,136,.08)'};border:1px solid ${(isPhish?cas.isPhish:!cas.isReal)?'var(--red)':'var(--green)'};color:${(isPhish?cas.isPhish:!cas.isReal)?'#ff9999':'var(--green)'}">
+      ${(isPhish?'⚠ C\'est du phishing':'')+((!isPhish&&!cas.isReal)?'⚠ Site frauduleux':'')+((isPhish&&!cas.isPhish)||(!isPhish&&cas.isReal)?'✓ Légitime':'')}<br>${cas.expl}
+    <\/div>
+    <div class="flex" style="margin-top:14px">
+      <button class="btn btn-o btn-sm" onclick="phishIdx=Math.max(0,phishIdx-1);phishAnswers={};renderPhishCenter()" ${phishIdx===0?'disabled':''}>← Préc<\/button>
+      <button class="btn btn-g btn-sm" onclick="phishIdx=Math.min(PHISHING_CASES.length-1,phishIdx+1);phishAnswers={};renderPhishCenter()" ${phishIdx===PHISHING_CASES.length-1?'disabled':''}>Suiv →<\/button>
+    <\/div>
+  <\/div>`;
+  updateLiveAnswers_phish();
+}
+function broadcastPhish() {
+  const cas = PHISHING_CASES[phishIdx];
+  phishAnswers = {};
+  channel.publish('host:phishing', {
+    index:phishIdx, cas:{
+      title:cas.title, platform:cas.platform,
+      url:cas.url, subject:cas.subject||'',
+      body:cas.body||cas.content||'', type:cas.type,
+      isPhish: cas.isPhish!==undefined ? cas.isPhish : !cas.isReal
+    }, mod:'phishing'
+  });
+  document.getElementById('live-answers').innerHTML='<div style="font-size:11px;color:var(--muted)">En attente des votes...<\/div>';
+  toast('Cas envoyé aux joueurs !');
+}
+function revealPhish() {
+  const r = document.getElementById('phish-reveal');
+  if (r) r.style.display='block';
+  const cas = PHISHING_CASES[phishIdx];
+  channel.publish('host:reveal', {
+    mod:'phishing',
+    isPhish: cas.isPhish!==undefined ? cas.isPhish : !cas.isReal,
+    expl: cas.expl
+  });
+}
+function updateLiveAnswers_phish() {
+  const cas = PHISHING_CASES[phishIdx];
+  const expected = cas.isPhish!==undefined ? cas.isPhish : !cas.isReal;
+  const votes = Object.values(phishAnswers);
+  const forPhish = votes.filter(v=>v===true).length;
+  const forLegit = votes.filter(v=>v===false).length;
+  const total = Math.max(1, Object.keys(players).length);
+  document.getElementById('live-answers').innerHTML = `
+    <div class="abar-row"><div class="abar-lbl" style="color:var(--red)">⚠<\/div><div class="abar-track"><div class="abar-fill" style="width:${Math.round(forPhish/total*100)}%;background:#e21b3c">${forPhish>0?forPhish:''}<\/div><\/div><div class="abar-n">${forPhish}<\/div><\/div>
+    <div class="abar-row"><div class="abar-lbl" style="color:var(--green)">✓<\/div><div class="abar-track"><div class="abar-fill" style="width:${Math.round(forLegit/total*100)}%;background:var(--green)">${forLegit>0?forLegit:''}<\/div><\/div><div class="abar-n">${forLegit}<\/div><\/div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;font-family:var(--mono)">${votes.length}/${Object.keys(players).length} ont voté<\/div>
+  `;
+}
+
+// ══════════════════ EMPREINTE ══════════════════
+function renderEmpreinteCenter() {
+  empreinteAnswers = new Array(EMPREINTE_QS.length).fill(null);
+  const c = document.getElementById('center');
+  c.innerHTML = `<div class="card">
+    <div class="card-title">👣 Empreinte Numérique<\/div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Les élèves répondent sur leur téléphone. Les réponses s\'affichent ici en temps réel.<\/div>
+    <button class="btn btn-g" onclick="broadcastEmpreinte(0)" style="margin-bottom:14px">📡 Envoyer question 1<\/button>
+    <div id="empreinte-live"><\/div>
+  <\/div>`;
+}
+function broadcastEmpreinte(idx) {
+  if (idx >= EMPREINTE_QS.length) { showEmpreinteResults(); return; }
+  const q = EMPREINTE_QS[idx];
+  channel.publish('host:empreinte', {
+    index:idx, total:EMPREINTE_QS.length,
+    question:q.q, opts:q.opts.map(o=>o[0])
+  });
+  // Reset answers for this question
+  Object.keys(players).forEach(id => {
+    if (!players[id].empreinte) players[id].empreinte = {};
+  });
+  renderEmpreinteQ(idx);
+  toast('Question '+(idx+1)+' envoyée !');
+}
+function renderEmpreinteQ(idx) {
+  const q = EMPREINTE_QS[idx];
+  const c = document.getElementById('center');
+  c.innerHTML = `<div class="card">
+    <div class="card-title">👣 Q${idx+1}/${EMPREINTE_QS.length} — Empreinte<\/div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:16px;line-height:1.4">${q.q}<\/div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">
+      ${q.opts.map((o,i)=>`<div style="padding:10px 14px;border-radius:7px;background:var(--bg3);border:1px solid var(--border);font-size:13px">${o[0]}</div>`).join('')}
+    <\/div>
+    <div id="empreinte-live" style="margin-bottom:14px"><\/div>
+    <div class="flex">
+      <button class="btn btn-g" onclick="broadcastEmpreinte(${idx+1})">${idx===EMPREINTE_QS.length-1?'Voir résultats →':'Question suivante →'}<\/button>
+    <\/div>
+  <\/div>`;
+  updateLiveAnswers_empreinte(idx);
+}
+function updateLiveAnswers_empreinte(idx) {
+  const qIdx = idx !== undefined ? idx : -1;
+  const el = document.getElementById('empreinte-live');
+  if (!el) return;
+  const total = Object.keys(players).length;
+  const answered = Object.values(players).filter(p=>p.empreinte&&Object.keys(p.empreinte).length>0).length;
+  el.innerHTML = `<div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${answered}/${total} ont répondu<\/div>`;
+}
+function showEmpreinteResults() {
+  // Compute aggregate score
+  const scores = Object.values(players).map(p => {
+    const total = Object.values(p.empreinte||{}).reduce((s,v)=>s+v,0);
+    const max = 10;
+    return {name:p.name, pct:Math.round(total/max*100)};
+  }).sort((a,b)=>a.pct-b.pct);
+  const c = document.getElementById('center');
+  c.innerHTML = `<div class="card">
+    <div class="card-title">👣 Résultats — Empreinte Numérique<\/div>
+    ${scores.map(s=>`<div class="srow"><div class="sr-name">${s.name}</div><div style="flex:1;margin:0 10px"><div style="height:14px;background:var(--bg4);border-radius:4px;overflow:hidden"><div style="width:${s.pct}%;height:100%;background:${s.pct<30?'var(--green)':s.pct<60?'var(--amber)':'var(--red)'};border-radius:4px"></div></div></div><div class="sr-pts" style="color:${s.pct<30?'var(--green)':s.pct<60?'var(--amber)':'var(--red)'}">${s.pct}%</div></div>`).join('')}
+    <button class="btn btn-o" onclick="renderEmpreinteCenter()" style="margin-top:12px">↺ Recommencer<\/button>
+  <\/div>`;
+  channel.publish('host:empreinte_end', { scores });
+}
+
+// ══════════════════ CTF ══════════════════
+function renderCTFCenter() {
+  ctfSubmissions = {};
+  const c = document.getElementById('center');
+  c.innerHTML = `<div class="card">
+    <div class="card-title">🚩 CTF Initiation<\/div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Envoie les challenges aux joueurs. Les soumissions arrivent en direct.<\/div>
+    ${CTF_CHALLENGES.map((ch,i)=>`
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:20px;border:1px solid var(--amber);color:var(--amber)">${ch.tag}</span>
+          <span style="font-size:13px;font-weight:700">${ch.title}</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--amber);font-family:var(--mono)">${ch.pts}pts</span>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${ch.desc}</div>
+        <div style="font-family:var(--mono);font-size:12px;background:var(--bg);padding:8px;border-radius:5px;color:var(--green);margin-bottom:8px;word-break:break-all">${ch.code}</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="btn btn-g btn-sm" onclick="broadcastCTF('${ch.id}')">📡 Envoyer</button>
+          <div id="ctf-sub-${ch.id}" style="font-size:11px;color:var(--muted);font-family:var(--mono)">0 soumission(s)</div>
+        </div>
+        <div id="ctf-results-${ch.id}" style="margin-top:8px"></div>
+      </div>
+    `).join('')}
+  <\/div>`;
+}
+function broadcastCTF(id) {
+  const ch = CTF_CHALLENGES.find(c=>c.id===id);
+  if (!ch) return;
+  ctfSubmissions[id] = {};
+  channel.publish('host:ctf', {
+    challengeId:id, tag:ch.tag, title:ch.title,
+    desc:ch.desc, code:ch.code, hint:ch.hint, pts:ch.pts
+  });
+  toast('Challenge "'+ch.title+'" envoyé !');
+}
+function updateLiveAnswers_ctf() {
+  CTF_CHALLENGES.forEach(ch => {
+    const subs = ctfSubmissions[ch.id] || {};
+    const el = document.getElementById('ctf-sub-'+ch.id);
+    const rel = document.getElementById('ctf-results-'+ch.id);
+    if (el) el.textContent = Object.keys(subs).length + ' soumission(s)';
+    if (rel) {
+      const correctOnes = Object.values(subs).filter(s=>s.correct);
+      rel.innerHTML = correctOnes.map(s=>`<div style="font-size:11px;color:var(--green);font-family:var(--mono)">✓ ${s.name}<\/div>`).join('');
+    }
+  });
+  // Update live answers panel
+  const allSubs = Object.entries(ctfSubmissions).flatMap(([id,subs])=>Object.values(subs).map(s=>({...s,id})));
+  const correct = allSubs.filter(s=>s.correct).length;
+  const wrong = allSubs.filter(s=>!s.correct).length;
+  document.getElementById('live-answers').innerHTML = `
+    <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${correct} bonne(s) · ${wrong} mauvaise(s)<\/div>
+    ${allSubs.filter(s=>s.correct).slice(-5).map(s=>`<div style="font-size:11px;color:var(--green);padding:3px 0">✓ ${s.name}</div>`).join('')}
+  `;
+}
+
+// ══════════════════ PASSWORD ══════════════════
+function renderPasswordCenter() {
+  const c = document.getElementById('center');
+  c.innerHTML = `<div class="card">
+    <div class="card-title">🔑 Password Checker — Démo live<\/div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Mode animateur uniquement — demande des suggestions à la salle !<\/div>
+    <input type="text" id="pw-inp" placeholder="Tape un mot de passe..." 
+      style="font-size:20px;font-family:var(--mono);padding:14px;margin-bottom:10px" 
+      oninput="checkPw(this.value)" autocomplete="off" spellcheck="false">
+    <div style="height:6px;background:var(--bg4);border-radius:3px;margin-bottom:12px;overflow:hidden"><div id="pw-bar" style="height:100%;border-radius:3px;transition:all .3s"><\/div><\/div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:4px">FORCE<\/div><div id="pw-force" style="font-size:18px;font-weight:700;font-family:var(--mono)">—<\/div><\/div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:4px">TEMPS CRACKAGE<\/div><div id="pw-time" style="font-size:13px;font-weight:700;font-family:var(--mono);margin-top:4px">—<\/div><\/div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:4px">LONGUEUR<\/div><div id="pw-len" style="font-size:18px;font-weight:700;font-family:var(--mono)">0<\/div><\/div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:4px">ENTROPIE (bits)<\/div><div id="pw-ent" style="font-size:18px;font-weight:700;font-family:var(--mono)">0<\/div><\/div>
+    <\/div>
+    <div id="pw-tips" style="font-size:13px;color:var(--muted);line-height:1.7">Tape un mot de passe pour analyser.<\/div>
+  <\/div>`;
+}
+function checkPw(pw) {
+  const len=pw.length;
+  document.getElementById('pw-len').textContent=len;
+  if(!len){['pw-force','pw-time','pw-ent'].forEach(id=>document.getElementById(id).textContent='—');document.getElementById('pw-bar').style.width='0';document.getElementById('pw-tips').textContent='Tape un mot de passe pour analyser.';return;}
+  let cs=0;
+  if(/[a-z]/.test(pw))cs+=26;if(/[A-Z]/.test(pw))cs+=26;if(/[0-9]/.test(pw))cs+=10;if(/[^a-zA-Z0-9]/.test(pw))cs+=32;
+  const ent=Math.round(len*Math.log2(cs||1));
+  document.getElementById('pw-ent').textContent=ent;
+  const common=['azerty','password','123456','qwerty','azerty123','password123','admin','letmein','welcome'];
+  const isCommon=common.some(c=>pw.toLowerCase().includes(c));
+  let score=0;
+  if(len>=8)score++;if(len>=12)score++;if(len>=16)score++;
+  if(/[A-Z]/.test(pw))score++;if(/[0-9]/.test(pw))score++;if(/[^a-zA-Z0-9]/.test(pw))score++;
+  if(isCommon)score=Math.max(0,score-3);
+  const lvls=[{l:'Très faible',c:'#ff4455',p:8,t:'Instantané'},{l:'Faible',c:'#ff7744',p:22,t:'Quelques secondes'},{l:'Moyen',c:'#ffaa00',p:45,t:'Quelques heures'},{l:'Fort',c:'#44cc88',p:72,t:'Plusieurs années'},{l:'Très fort',c:'#00ff88',p:100,t:'> 1 milliard d\'années'}];
+  const lv=lvls[score>5?4:score>3?3:score>2?2:score>1?1:0];
+  const fe=document.getElementById('pw-force'); fe.textContent=lv.l; fe.style.color=lv.c;
+  document.getElementById('pw-time').textContent=lv.t;
+  const bar=document.getElementById('pw-bar'); bar.style.width=lv.p+'%'; bar.style.background=lv.c;
+  let tips=[];
+  if(len<12)tips.push('→ Allonge ton mot de passe (12+ caractères)');
+  if(!/[A-Z]/.test(pw))tips.push('→ Ajoute des majuscules');
+  if(!/[0-9]/.test(pw))tips.push('→ Ajoute des chiffres');
+  if(!/[^a-zA-Z0-9]/.test(pw))tips.push('→ Ajoute des symboles');
+  if(isCommon)tips.push('⚠ Mot de passe trop courant !');
+  if(score>=5)tips=['✓ Excellent ! Utilise Bitwarden pour stocker des mots de passe uniques.'];
+  document.getElementById('pw-tips').innerHTML=tips.join('<br>')||'✓ Très bon !';
+}
+
+// ── TOAST ──
+function toast(msg) {
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ── INIT ──
+initAbly();
+switchMod('quiz');
+</script>
+</body>
+</html>
