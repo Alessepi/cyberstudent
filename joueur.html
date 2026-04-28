@@ -251,7 +251,11 @@ const shapes = ['▲','◆','●','✖'];
 let ably, channel;
 let pid = 'p_' + Math.random().toString(36).substr(2,8);
 let pname = '', room = '', myTeam = null, myScore = 0, myCorrect = 0;
-let teams = [], timerDur = 15, timeLeft = 15, timerInt = null;
+let teams = [
+  {name:'Équipe Rouge', color:'#ff4455', count:0},
+  {name:'Équipe Bleue', color:'#4488ff', count:0},
+  {name:'Équipe Verte', color:'#00ff88', count:0}
+], timerDur = 15, timeLeft = 15, timerInt = null;
 let answered = false, myAns = -1;
 let currentMod = 'quiz';
 let currentCTF = null, ctfAnswered = false;
@@ -261,6 +265,8 @@ let phishVoted = false;
 // Pre-fill room from URL
 const up = new URLSearchParams(window.location.search);
 if (up.get('room')) document.getElementById('room-inp').value = up.get('room').toUpperCase();
+// Show default teams immediately
+renderTeamBtns();
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
