@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cyber Conf — Animateur</title>
-<script src="https://unpkg.com/ably@2/ably.min.js"></script>
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -94,6 +94,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--border2)}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
 </style>
+<script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
 </head>
 <body>
 <div class="toast" id="toast"></div>
@@ -246,6 +247,19 @@ let phishAnswers = {};
 let empreinteAnswers = new Array(EMPREINTE_QS.length).fill(null);
 let ctfSubmissions = {}; // challengeId -> {playerId -> answer}
 
+
+
+function loadAblyFallback() {
+  var s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/ably/ably.min.js';
+  s.onload = function() { initAbly(); };
+  document.head.appendChild(s);
+}
+
+function safePublish(event, data) {
+  if (channel) channel.publish(event, data);
+}
+
 // ── ABLY ──
 function initAbly() {
   ably = new Ably.Realtime({ key: ABLY_KEY });
@@ -274,8 +288,8 @@ function initAbly() {
         color: document.getElementById('tc'+i).value
       }));
     }
-    channel.publish('host:teams', { teams: getTeamPayload() });
-    channel.publish('host:state', {
+    safePublish('host:teams', { teams: getTeamPayload() });
+    safePublish('host:state', {
       phase: quizPhase, teams: getTeamPayload(),
       mod: currentMod, timeLeft: timerLeft
     });
@@ -317,9 +331,9 @@ function initAbly() {
       if (correct) {
         players[id].score += ch.pts;
         players[id].correct++;
-        channel.publish('host:ctf_result', {playerId:id, challengeId, correct:true, pts:ch.pts});
+        safePublish('host:ctf_result', {playerId:id, challengeId, correct:true, pts:ch.pts});
       } else {
-        channel.publish('host:ctf_result', {playerId:id, challengeId, correct:false, pts:0});
+        safePublish('host:ctf_result', {playerId:id, challengeId, correct:false, pts:0});
       }
       updateLiveAnswers_ctf();
     }
@@ -360,7 +374,7 @@ function broadcastTeams() {
     name: document.getElementById('tn'+i).value.trim() || ('Équipe '+(i+1)),
     color: document.getElementById('tc'+i).value
   }));
-  channel.publish('host:teams', { teams: getTeamPayload() });
+  safePublish('host:teams', { teams: getTeamPayload() });
   updateLiveTeams();
   updateTeamSB();
   toast('Équipes envoyées !');
@@ -417,7 +431,7 @@ function switchMod(mod) {
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('nb-'+mod).classList.add('active');
   document.getElementById('phase-pill').textContent = mod;
-  channel.publish('host:mod_change', { mod });
+  safePublish('host:mod_change', { mod });
   if (mod==='quiz') renderQuizCenter();
   else if (mod==='phishing') renderPhishCenter();
   else if (mod==='empreinte') renderEmpreinteCenter();
@@ -511,7 +525,7 @@ function nextQ() {
   timerDur = parseInt(document.getElementById('timer-sel').value)||15;
   timerLeft = timerDur;
   Object.keys(players).forEach(id=>players[id].answered=false);
-  channel.publish('host:question', {
+  safePublish('host:question', {
     index:quizIdx, total:quizQ.length,
     question:{q:currentQ.q, opts:currentQ.opts, theme:currentQ.theme},
     timerDuration:timerDur, mod:'quiz'
@@ -524,7 +538,7 @@ function startTimer() {
   clearInterval(timerInterval);
   timerInterval = setInterval(()=>{
     timerLeft--;
-    channel.publish('host:tick',{timeLeft:timerLeft});
+    safePublish('host:tick',{timeLeft:timerLeft});
     const n=document.getElementById('tnum'), f=document.getElementById('tfill');
     if (n) {
       const pct=timerLeft/timerDur*100;
@@ -539,7 +553,7 @@ function revealQuiz() {
   if (quizPhase!=='question') return;
   clearInterval(timerInterval);
   quizPhase='reveal';
-  channel.publish('host:reveal',{
+  safePublish('host:reveal',{
     correct:currentQ.correct, correctText:currentQ.opts[currentQ.correct],
     expl:currentQ.expl, mod:'quiz',
     scores:Object.fromEntries(Object.entries(players).map(([id,p])=>[id,{score:p.score,correct:p.correct}]))
@@ -551,7 +565,7 @@ function showPodium() {
   quizPhase='podium';
   const sorted=Object.values(players).sort((a,b)=>b.score-a.score);
   const ts=teamDefs.map(t=>{const m=Object.values(players).filter(p=>p.team===t.name);return{name:t.name,color:t.color,total:m.reduce((s,p)=>s+p.score,0)};}).sort((a,b)=>b.total-a.total);
-  channel.publish('host:podium',{
+  safePublish('host:podium',{
     scores:sorted.map(p=>({name:p.name,score:p.score,correct:p.correct,team:p.team||null})),
     teams:ts, mod:'quiz'
   });
@@ -562,7 +576,7 @@ function resetQuiz() {
   clearInterval(timerInterval);
   quizPhase='lobby'; quizIdx=-1; currentQ=null; quizAnswers={};
   Object.keys(players).forEach(id=>{players[id].score=0;players[id].correct=0;});
-  channel.publish('host:reset',{mod:'quiz'});
+  safePublish('host:reset',{mod:'quiz'});
   renderQuizCenter(); updateRightPanel();
   document.getElementById('phase-pill').textContent='lobby';
 }
@@ -631,7 +645,7 @@ function renderPhishCenter() {
 function broadcastPhish() {
   const cas = PHISHING_CASES[phishIdx];
   phishAnswers = {};
-  channel.publish('host:phishing', {
+  safePublish('host:phishing', {
     index:phishIdx, cas:{
       title:cas.title, platform:cas.platform,
       url:cas.url, subject:cas.subject||'',
@@ -646,7 +660,7 @@ function revealPhish() {
   const r = document.getElementById('phish-reveal');
   if (r) r.style.display='block';
   const cas = PHISHING_CASES[phishIdx];
-  channel.publish('host:reveal', {
+  safePublish('host:reveal', {
     mod:'phishing',
     isPhish: cas.isPhish!==undefined ? cas.isPhish : !cas.isReal,
     expl: cas.expl
@@ -680,7 +694,7 @@ function renderEmpreinteCenter() {
 function broadcastEmpreinte(idx) {
   if (idx >= EMPREINTE_QS.length) { showEmpreinteResults(); return; }
   const q = EMPREINTE_QS[idx];
-  channel.publish('host:empreinte', {
+  safePublish('host:empreinte', {
     index:idx, total:EMPREINTE_QS.length,
     question:q.q, opts:q.opts.map(o=>o[0])
   });
@@ -728,7 +742,7 @@ function showEmpreinteResults() {
     ${scores.map(s=>`<div class="srow"><div class="sr-name">${s.name}</div><div style="flex:1;margin:0 10px"><div style="height:14px;background:var(--bg4);border-radius:4px;overflow:hidden"><div style="width:${s.pct}%;height:100%;background:${s.pct<30?'var(--green)':s.pct<60?'var(--amber)':'var(--red)'};border-radius:4px"></div></div></div><div class="sr-pts" style="color:${s.pct<30?'var(--green)':s.pct<60?'var(--amber)':'var(--red)'}">${s.pct}%</div></div>`).join('')}
     <button class="btn btn-o" onclick="renderEmpreinteCenter()" style="margin-top:12px">↺ Recommencer<\/button>
   <\/div>`;
-  channel.publish('host:empreinte_end', { scores });
+  safePublish('host:empreinte_end', { scores });
 }
 
 // ══════════════════ CTF ══════════════════
@@ -760,7 +774,7 @@ function broadcastCTF(id) {
   const ch = CTF_CHALLENGES.find(c=>c.id===id);
   if (!ch) return;
   ctfSubmissions[id] = {};
-  channel.publish('host:ctf', {
+  safePublish('host:ctf', {
     challengeId:id, tag:ch.tag, title:ch.title,
     desc:ch.desc, code:ch.code, hint:ch.hint, pts:ch.pts
   });
