@@ -488,7 +488,20 @@ function subscribeAll() {
     const {title, index, total, filename} = msg.data;
     document.getElementById('osint-title').textContent = title;
     document.getElementById('osint-ctr').textContent = (index+1)+'/'+total;
-    document.getElementById('osint-img-zone').innerHTML = '<img src="'+filename+'" style="max-width:100%;max-height:300px;border-radius:8px" onerror="this.parentElement.innerHTML=\'<div style=\\\'padding:20px;text-align:center;color:var(--muted)\\\'><div style=\\\'font-size:32px\\\'>🖼️</div><div>'+filename+'</div></div>\'" />';
+    // Image loads from same GitHub Pages folder
+    const zone = document.getElementById('osint-img-zone');
+    zone.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = filename;
+    img.style.cssText = 'max-width:100%;max-height:300px;border-radius:8px;display:block';
+    img.onerror = function() {
+      this.style.display='none';
+      zone.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">'
+        + '<div style="font-size:36px">📷</div>'
+        + '<div style="font-size:13px;margin-top:8px">Regardez l\'écran de l\'animateur</div>'
+        + '</div>';
+    };
+    zone.appendChild(img);
     document.getElementById('osint-answer-txt').value = '';
     document.getElementById('osint-submit-btn').style.display = 'block';
     document.getElementById('osint-sent-msg').style.display = 'none';
@@ -498,7 +511,7 @@ function subscribeAll() {
     showScreen('osint');
     document.getElementById('sbar').classList.remove('hidden');
     updateSbar();
-  });
+    });
 
   channel.subscribe('host:osint_indice', msg => {
     const el = document.getElementById('osint-indices-player');
