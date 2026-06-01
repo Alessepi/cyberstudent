@@ -88,6 +88,7 @@ input:focus,select:focus{border-color:var(--border2)}
       <button class="nb" id="nb-ctf" onclick="switchMod('ctf')"><span class="ic">🚩</span>CTF Initiation</button>
       <button class="nb" id="nb-password" onclick="switchMod('password')"><span class="ic">🔑</span>Password (démo)</button>
       <button class="nb" id="nb-cyber" onclick="switchMod('cyber')"><span class="ic">💬</span>Cyberharcèlement</button>
+      <button class="nb" id="nb-osint" onclick="switchMod('osint')"><span class="ic">🔍</span>OSINT — Trouve l'adresse</button>
 
       <div class="pt">Équipes</div>
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:7px"><input type="color" class="cpick" id="tc0" value="#ff4455"><input type="text" id="tn0" value="Équipe Rouge"></div>
@@ -114,11 +115,30 @@ input:focus,select:focus{border-color:var(--border2)}
           <option value="Cyberharcèlement">💬 Cyberharcèlement</option>
         </select>
       </div>
-      <div style="display:flex;gap:6px;align-items:center">
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:7px">
         <label style="font-size:11px;color:var(--muted);width:50px;flex-shrink:0">Timer</label>
         <select id="timer-sel" style="font-size:11px">
           <option value="10">10s</option><option value="15" selected>15s</option>
           <option value="20">20s</option><option value="30">30s</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:7px">
+        <label style="font-size:11px;color:var(--muted);width:50px;flex-shrink:0">Nb Q.</label>
+        <select id="quiz-count-sel" style="font-size:11px">
+          <option value="10">10 questions</option>
+          <option value="15" selected>15 questions</option>
+          <option value="20">20 questions</option>
+          <option value="30">30 questions</option>
+          <option value="0">Toutes</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <label style="font-size:11px;color:var(--muted);width:50px;flex-shrink:0">Nb cas</label>
+        <select id="phish-count-sel" style="font-size:11px">
+          <option value="4">4 cas</option>
+          <option value="6" selected>6 cas</option>
+          <option value="8">8 cas</option>
+          <option value="0">Tous</option>
         </select>
       </div>
 
@@ -285,8 +305,229 @@ const CTF = [
 const CYBER_SCENARIOS = [
   {id:'s1',platform:'WhatsApp',title:'Le groupe sans Emma',context:'Emma, 14 ans, découvre qu\'elle a été exclue du groupe de classe et que des memes humiliants circulent sur elle.',msgs:[{s:'Lucas',t:'Vous avez vu la tête d\'Emma aujourd\'hui lmao',d:true},{s:'Inès',t:'Sérieux elle est trop bizarre 💀',d:true},{s:'Thomas',t:'Quelqu\'un lui a dit qu\'elle était pas invitée ?',d:true}],legal:'Le cyberharcèlement implique répétition. Exclure et se moquer = harcèlement moral.',sanctions:'Jusqu\'à 2 ans et 30 000€ si victime mineure.',queFaire:['Faire des captures d\'écran comme preuves','En parler à un adulte de confiance','Appeler le 3018','Ne pas répondre aux provocations']},
   {id:'s2',platform:'Instagram',title:'La photo sans consentement',context:'Une photo d\'Antoine pleurant après un match perdu est postée sur Instagram et tourne dans toute l\'école.',legal:'Droit à l\'image : publier une photo sans consentement est un délit pénal (article 226-1).',sanctions:'1 an de prison et 45 000€ d\'amende.',queFaire:['Signaler la photo sur Instagram','Demander la suppression','Porter plainte si pas supprimée','Contacter le 3018']},
-  {id:'s3',platform:'SMS',title:'La sextorsion',context:'Jade, 16 ans, a envoyé une photo intime. La personne la menace maintenant de tout envoyer si elle ne paie pas.',legal:'Sextorsion = chantage aggravé. La victime n\'est JAMAIS responsable.',sanctions:'Chantage avec images intimes : jusqu\'à 7 ans de prison.',queFaire:['NE PAS PAYER — cela empire la situation','Bloquer et conserver les preuves','Appeler le 3018 immédiatement','Porter plainte — des unités spécialisées existent']},
+  {id:'s3',platform:'SMS',title:'La sextorsion',context:'Jade, 16 ans, a envoyé une photo intime. La personne la menace maintenant de tout envoyer si elle ne paie pas.',legal:'Sextorsion = chantage aggravé. La victime n\'est JAMAIS responsable.',sanctions:'Chantage avec images intimes : jusqu\'à 7 ans de prison.',queFaire:['NE PAS PAYER — cela empire la situation','Bloquer et conserver les preuves','Appeler le 3018 immédiatement','Porter plainte — des unités spécialisées existent']},,
+  // MOTS DE PASSE - nouvelles
+  {theme:"Mots de passe",q:"Qu\'est-ce qu\'un sel (salt) en cryptographie ?",opts:["Une épice pour chiffrer","Donnée aléatoire ajoutée avant de hasher un mot de passe","Un algorithme de chiffrement","Un type de VPN"],correct:1,expl:"Le sel est une valeur aléatoire ajoutée au mot de passe avant le hachage. Il empêche les attaques par tables arc-en-ciel en rendant chaque hash unique même pour des mots de passe identiques."},
+  {theme:"Mots de passe",q:"Qu\'est-ce qu\'une rainbow table ?",opts:["Un tableau de couleurs","Base de données pré-calculée de hashes pour craquer des mots de passe","Un outil de visualisation réseau","Un type de pare-feu"],correct:1,expl:"Une rainbow table contient des mots de passe et leurs hashes précalculés. L\'attaquant compare le hash volé à sa table. Le sel (salt) rend cette attaque inefficace."},
+  {theme:"Mots de passe",q:"Qu\'est-ce que le credential stuffing ?",opts:["Remplir un formulaire automatiquement","Tester massivement des identifiants volés sur de nombreux sites","Un type de phishing","Une attaque DDoS"],correct:1,expl:"Le credential stuffing utilise des listes d\'identifiants volés lors de fuites pour tenter de se connecter sur d\'autres services. Très efficace si vous réutilisez vos mots de passe."},
+  {theme:"Mots de passe",q:"Qu\'est-ce que le SIM swapping ?",opts:["Changer de téléphone","Convaincre l\'opérateur de transférer un numéro vers une SIM pirate","Un malware mobile","Cloner une carte SIM"],correct:1,expl:"Le SIM swapping convainc l\'opérateur de transférer ton numéro vers une nouvelle SIM contrôlée par l\'attaquant. Il reçoit alors tes SMS de 2FA."},
+  {theme:"Mots de passe",q:"Qu\'est-ce qu\'une clé de sécurité physique (YubiKey) ?",opts:["Un antivirus sur clé USB","Périphérique USB/NFC qui génère un code d\'authentification unique","Un gestionnaire de mots de passe portable","Un disque dur chiffré"],correct:1,expl:"Une clé physique comme YubiKey génère un code unique à chaque connexion. C\'est la forme la plus sécurisée de 2FA car elle résiste même aux phishings sophistiqués."},
+  {theme:"Mots de passe",q:"Quelle est la différence entre chiffrement et hachage ?",opts:["Aucune différence","Le chiffrement est réversible, le hachage est irréversible","Le hachage est plus lent","Le chiffrement ne s\'applique qu\'aux fichiers"],correct:1,expl:"Le chiffrement permet de retrouver les données originales avec une clé. Le hachage est à sens unique. On hash les mots de passe, on chiffre les messages."},
+  // PHISHING - nouvelles
+  {theme:"Phishing",q:"Qu\'est-ce que le whaling ?",opts:["Phishing ciblant les baleines","Phishing ciblant les dirigeants d\'entreprise (PDG, DAF...)","Phishing par vidéo","Phishing sur les réseaux"],correct:1,expl:"Le whaling cible les dirigeants : PDG, DAF... Les attaquants prennent le temps de connaître leur cible pour des messages très crédibles, souvent avec des demandes de virement."},
+  {theme:"Phishing",q:"Qu\'est-ce que le quishing ?",opts:["Phishing par questionnaire","Phishing via QR code","Phishing silencieux","Phishing quantique"],correct:1,expl:"Le quishing utilise de faux QR codes pour rediriger vers des sites malveillants. Particulièrement dangereux car l\'URL n\'est pas visible avant de scanner."},
+  {theme:"Phishing",q:"Qu\'est-ce que le typosquatting ?",opts:["Squatter des maisons","Enregistrer des domaines avec des fautes de frappe proches de marques connues","Voler des comptes Twitter","Un type de malware"],correct:1,expl:"Le typosquatting enregistre des domaines avec des fautes de frappe (gooogle.com, amazzon.fr) pour piéger les utilisateurs qui tapent mal l\'URL."},
+  {theme:"Phishing",q:"Comment reconnaître un email de phishing malgré une adresse apparemment légitime ?",opts:["Impossible si l\'adresse est correcte","Vérifier le vrai domaine d\'envoi dans les en-têtes SMTP","Appeler l\'expéditeur","Regarder uniquement la signature"],correct:1,expl:"L\'adresse affichée peut être falsifiée (spoofing). Les en-têtes SMTP révèlent le vrai serveur d\'envoi. Afficher la source du message montre le vrai expéditeur."},
+  // RÉSEAUX SOCIAUX - nouvelles
+  {theme:"Réseaux sociaux",q:"Qu\'est-ce que le stalkerware ?",opts:["Un réseau social pour stalkers","Logiciel espion installé à l\'insu de la victime pour surveiller ses activités","Un virus sur Instagram","Un type de deepfake"],correct:1,expl:"Le stalkerware est installé discrètement sur le téléphone d\'une personne pour surveiller messages, localisation, appels... C\'est illégal et souvent lié à des violences conjugales."},
+  {theme:"Réseaux sociaux",q:"Pourquoi désactiver la géolocalisation dans les photos avant de les publier ?",opts:["Pour économiser la batterie","Les métadonnées EXIF contiennent les coordonnées GPS précises du lieu de prise","Pour réduire la taille du fichier","Pour améliorer la qualité"],correct:1,expl:"Les photos contiennent des métadonnées EXIF incluant les coordonnées GPS. Publier une photo depuis chez toi peut révéler ton adresse exacte à quiconque examine les métadonnées."},
+  {theme:"Réseaux sociaux",q:"Qu\'est-ce que le catfishing ?",opts:["Pêcher des poissons-chats","Créer une fausse identité en ligne pour tromper quelqu\'un","Un type de phishing email","Voler des photos de profil"],correct:1,expl:"Le catfishing crée une fausse identité sur les réseaux pour établir une relation trompeuse. Utilisé pour manipulation affective, arnaque ou prédation."},
+  // CADRE LÉGAL - nouvelles
+  {theme:"Cadre légal",q:"Qu\'est-ce que la CNIL ?",opts:["Commission Nationale Informatique et Libertés — autorité française de protection des données","Comité National d\'Inspection des Logiciels Illégaux","Centre National des Infrastructures Légales","Commission Numérique et Internet Local"],correct:0,expl:"La CNIL est l\'autorité administrative indépendante française chargée de protéger les données personnelles. Elle contrôle les entreprises et peut infliger des sanctions."},
+  {theme:"Cadre légal",q:"Qu\'est-ce que le droit à l\'oubli numérique ?",opts:["Effacer sa mémoire","Demander aux moteurs de recherche de déréférencer certains liens te concernant","Supprimer tous ses comptes","Un droit uniquement pour les mineurs"],correct:1,expl:"Le droit au déréférencement permet de demander à Google de ne plus afficher certains liens dans les résultats te concernant. Reconnu par la CJUE en 2014, encadré par le RGPD."},
+  {theme:"Cadre légal",q:"Qu\'est-ce qu\'un DPO (Data Protection Officer) ?",opts:["Directeur des Programmes Officiels","Délégué à la Protection des Données — responsable RGPD en entreprise","Digital Privacy Officer","Directeur des Politiques Opérationnelles"],correct:1,expl:"Le DPO est le responsable RGPD au sein d\'une organisation. Il conseille sur la conformité et est le point de contact avec la CNIL. Obligatoire pour certaines organisations."},
+  // MALWARES - nouvelles
+  {theme:"Malwares",q:"Qu\'est-ce qu\'un rootkit ?",opts:["Un kit de démarrage Linux","Malware qui se dissimule au niveau du système d\'exploitation pour éviter la détection","Un logiciel de gestion des droits","Un type d\'antivirus"],correct:1,expl:"Un rootkit s\'installe profondément dans le système pour se cacher et cacher d\'autres malwares. Extrêmement difficile à détecter et supprimer."},
+  {theme:"Malwares",q:"Qu\'est-ce qu\'un keylogger ?",opts:["Un logiciel de clavier alternatif","Malware qui enregistre toutes les frappes clavier pour voler mots de passe","Un type de pare-feu","Un outil de développement"],correct:1,expl:"Un keylogger enregistre chaque touche pressée. Invisible pour l\'utilisateur, il capture mots de passe, numéros de carte, messages... et les envoie à l\'attaquant."},
+  {theme:"Malwares",q:"Qu\'est-ce qu\'un malware fileless ?",opts:["Malware sans fichier — s\'exécute uniquement en mémoire RAM","Un malware qui efface les fichiers","Un virus sans signature","Un malware sur clé USB"],correct:0,expl:"Un malware fileless n\'écrit rien sur le disque dur : il s\'exécute directement en mémoire via des outils légitimes du système. Très difficile à détecter par les antivirus classiques."},
+  {theme:"Malwares",q:"Qu\'est-ce qu\'un cryptomineur malveillant ?",opts:["Un virus qui chiffre les fichiers","Malware qui utilise ta machine pour miner des cryptomonnaies à ton insu","Un ransomware blockchain","Un voleur de portefeuilles crypto"],correct:1,expl:"Le cryptojacking installe un mineur sur ta machine. Tu ne perds pas de données mais ton ordinateur ralentit, ta facture électrique augmente et ton matériel s\'use prématurément."},
+  // WIFI & RÉSEAU - nouvelles
+  {theme:"WiFi & réseau",q:"Qu\'est-ce que le DNS poisoning ?",opts:["Infecter un serveur DNS avec un virus","Corrompre le cache DNS pour rediriger les utilisateurs vers de faux sites","Attaquer les serveurs de noms de domaine","Voler des domaines internet"],correct:1,expl:"Le DNS poisoning modifie les tables de résolution DNS pour rediriger le trafic vers de faux sites. Quand tu tapes une URL correcte, tu arrives quand même sur un faux site."},
+  {theme:"WiFi & réseau",q:"Qu\'est-ce qu\'un honeypot en cybersécurité ?",opts:["Un piège à abeilles connecté","Système leurre conçu pour attirer et analyser les attaquants","Un type de pare-feu","Un logiciel de surveillance réseau"],correct:1,expl:"Un honeypot est un système volontairement vulnérable pour attirer les attaquants. Il permet d\'étudier leurs techniques, collecter des preuves et alerter sur une intrusion."},
+  {theme:"WiFi & réseau",q:"Qu\'est-ce qu\'un scan de ports ?",opts:["Scanner des QR codes sur un réseau","Sonder un système pour découvrir quels ports réseau sont ouverts","Scanner des documents en réseau","Chercher des réseaux Wi-Fi"],correct:1,expl:"Un scan de ports (Nmap par exemple) identifie les ports ouverts sur un système et les services associés. Utilisé légalement lors d\'un audit ou pentest pour cartographier la surface d\'attaque."},
+  // BONNES PRATIQUES - nouvelles
+  {theme:"Bonnes pratiques",q:"Qu\'est-ce que la politique du moindre privilège ?",opts:["Payer le moins pour la sécurité","Donner à chaque utilisateur uniquement les droits nécessaires à son travail","Utiliser des logiciels gratuits","Réduire les mises à jour"],correct:1,expl:"Le moindre privilège limite les dégâts si un compte est compromis. Un stagiaire n\'a pas besoin des droits admin. Chaque permission inutile est un risque."},
+  {theme:"Bonnes pratiques",q:"Pourquoi chiffrer son disque dur ?",opts:["Pour économiser de l\'espace","Si le matériel est volé, les données restent illisibles sans la clé","Pour accélérer l\'ordinateur","Pour éviter les virus"],correct:1,expl:"Le chiffrement complet du disque (BitLocker, FileVault) protège les données en cas de vol physique. Sans la clé, le voleur ne peut pas lire les données."},
+  {theme:"Bonnes pratiques",q:"Qu\'est-ce qu\'un plan de réponse aux incidents ?",opts:["Un plan de communication de crise","Document définissant les procédures à suivre en cas de cyberattaque","Un plan d\'assurance","Un manuel antivirus"],correct:1,expl:"Un plan de réponse définit QUI fait QUOI et QUAND en cas d\'attaque : isolation, notification, investigation, remédiation. Les organisations sans ce plan perdent en moyenne 3x plus de temps."},
+  // IA & DEEPFAKES - nouvelles
+  {theme:"IA & Deepfakes",q:"Comment l\'IA générative change-t-elle les arnaques en ligne ?",opts:["Elle les rend moins nombreuses","Permet de créer faux profils, emails et appels ultra-personnalisés à grande échelle","Elle ne change rien","Elle aide uniquement à détecter les arnaques"],correct:1,expl:"L\'IA générative industrialise les arnaques : faux profils crédibles, emails parfaits, voix clonées... Ce qui prenait des heures à un humain prend des secondes à une IA."},
+  {theme:"IA & Deepfakes",q:"Qu\'est-ce que le clonage vocal par IA ?",opts:["Copier physiquement un haut-parleur","Recréer la voix d\'une personne à partir de quelques secondes d\'enregistrement","Synchroniser des voix en studio","Traduire automatiquement la parole"],correct:1,expl:"Des outils comme ElevenLabs clonent une voix avec seulement 3-10 secondes d\'audio. En 2023, une fraude à 25M$ a utilisé un deepfake vidéo en visioconférence."},
+  {theme:"IA & Deepfakes",q:"Qu\'est-ce que le jailbreaking d\'une IA ?",opts:["Pirater physiquement un serveur IA","Manipuler une IA pour qu\'elle contourne ses restrictions de sécurité","Accélérer les calculs d\'une IA","Copier un modèle d\'IA"],correct:1,expl:"Le jailbreaking exploite des failles dans les instructions de sécurité d\'une IA pour lui faire produire du contenu normalement interdit."},
+  // MÉTIERS CYBER - nouvelles
+  {theme:"Métiers cyber",q:"Qu\'est-ce qu\'un bug bounty hunter ?",opts:["Chasseur de bugs dans des jeux vidéo","Chercheur rémunéré pour trouver et signaler des vulnérabilités légalement","Un développeur qui corrige des bugs","Un testeur logiciel"],correct:1,expl:"Les bug bounty hunters cherchent des failles dans des systèmes dont les propriétaires ont ouvert un programme de récompenses. Plateformes : HackerOne, Bugcrowd, YesWeHack."},
+  {theme:"Métiers cyber",q:"Qu\'est-ce que la threat intelligence ?",opts:["L\'IA des menaces","Collecte et analyse de données sur les menaces pour anticiper les attaques","Un type de pare-feu intelligent","La surveillance des employés"],correct:1,expl:"La threat intelligence analyse les tactiques des attaquants, les IOC (indicateurs de compromission), les groupes APT... pour anticiper les attaques avant qu\'elles arrivent."},
+  {theme:"Métiers cyber",q:"Qu\'est-ce que la cyber résilience ?",opts:["La résistance physique des serveurs","Capacité à maintenir les opérations et se remettre rapidement d\'une cyberattaque","Un type d\'assurance cyber","La résistance d\'un code à être craqué"],correct:1,expl:"La cyber résilience va au-delà de la sécurité préventive : accepter qu\'une attaque puisse réussir et se préparer à continuer à fonctionner malgré elle."},
+  // CULTURE CYBER - nouvelles
+  {theme:"Culture cyber",q:"Qu\'est-ce que le groupe Lazarus ?",opts:["Un groupe de hackers espagnols","Groupe APT nord-coréen responsable de milliards de dollars de vols","Un CERT international","Un groupe de chercheurs en sécurité"],correct:1,expl:"Lazarus Group est attribué à la Corée du Nord. Responsable du hack Sony Pictures (2014), WannaCry (2017), de vols de cryptomonnaies. Finance le programme nucléaire nord-coréen."},
+  {theme:"Culture cyber",q:"Combien coûte NotPetya aux entreprises mondiales ?",opts:["Environ 100 millions","Environ 1 milliard","Plus de 10 milliards de dollars","Environ 500 millions"],correct:2,expl:"NotPetya (2017), attribué à la Russie : 10+ milliards de dégâts. Maersk 300M$, Merck 870M$, FedEx 400M$. Déguisé en ransomware mais conçu pour détruire."},
+  {theme:"Culture cyber",q:"Qu\'est-ce que la convention de Budapest ?",opts:["Une conférence annuelle de hackers","Le premier traité international sur la cybercriminalité (2001)","Un accord de libre-échange numérique","Un standard de chiffrement européen"],correct:1,expl:"La Convention de Budapest (2001) est le premier traité international sur la cybercriminalité. Ratifié par 60+ pays, il harmonise les lois nationales et facilite la coopération internationale."},
+  // CYBERHARCÈLEMENT - nouvelles
+  {theme:"Cyberharcèlement",q:"Qu\'est-ce que la sextorsion ?",opts:["Type de spam","Chantage avec des images intimes réelles ou fabriquées","Virus sur site adulte","Phishing ciblant les adultes"],correct:1,expl:"Chantage aggravé. La victime n\'est JAMAIS responsable. Ne jamais payer — cela empire la situation. Appeler le 3018 immédiatement."},
+  {theme:"Cyberharcèlement",q:"Qu\'est-ce que l\'usurpation d\'identité numérique ?",opts:["Oublier son mot de passe","Créer un faux profil au nom d\'une personne pour nuire à sa réputation","Pirater un compte","Voler des données personnelles"],correct:1,expl:"L\'usurpation d\'identité numérique est un délit depuis 2011 (loi LOPPSI 2). Créer un faux profil au nom de quelqu\'un : 1 an de prison et 15 000€."},
+  {theme:"Cyberharcèlement",q:"Que signifie le site signalement.gouv.fr ?",opts:["Signaler des problèmes administratifs","Signaler des contenus illégaux en ligne à la police","Déposer une plainte en ligne","Contacter la CNIL"],correct:1,expl:"Signalement.gouv.fr (plateforme PHAROS) permet de signaler tout contenu illégal en ligne : harcèlement, menaces, pédopornographie, contenus haineux. Géré par la police nationale."},
+,
+  {id:'p4',type:'sms',title:'SMS Chronopost suspect',from:'CHRONOPOST',subject:'',body:'CHRONOPOST: Votre colis #FR847291 est en attente. Frais de douane: 2,50€ à régler avant livraison: http://chronopost-livraison.net/payer',isPhish:true,clues:["Domaine non officiel","Demande de paiement par SMS","Le vrai Chronopost est chronopost.fr","Lien suspect"],expl:"Arnaque aux faux SMS de livraison. Le vrai Chronopost est chronopost.fr. Ces SMS récoltent les données bancaires via une fausse page de paiement."},
+  {id:'p5',type:'email',title:'Faux email Microsoft',from:'security-alert@microsoft-account.net',subject:'Action requise : Activité suspecte détectée',body:'Votre compte Microsoft a été connecté depuis Moscou.\n\nSi ce n\'était pas vous :\nhttps://microsoft-account.net/secure\n\nSans réponse dans 24h, votre compte sera suspendu.',isPhish:true,clues:["Domaine microsoft-account.net (pas microsoft.com)","Urgence 24h","Microsoft utilise uniquement microsoft.com","Lien suspect"],expl:"Phishing Microsoft. Le domaine officiel est microsoft.com. Microsoft ne menace jamais de suspendre un compte par email."},
+  {id:'p6',type:'email',title:'Email DHL légitime',from:'noreply@dhl.com',subject:'Votre envoi 1Z999AA1 est en route',body:'Bonjour,\n\nVotre envoi DHL est en cours de livraison.\nNuméro de suivi : 1Z999AA1012345678\nLivraison prévue : demain entre 9h et 13h\n\nSuivre mon envoi sur dhl.com',isPhish:false,clues:["Domaine officiel dhl.com","Numéro de suivi précis","Pas de demande de paiement","Lien vers dhl.com"],expl:"Email légitime. Domaine dhl.com officiel, numéro de suivi précis, pas de demande urgente."},
+  {id:'p7',type:'site',title:'Faux site CAF',url:'https://caf-allocations-famille.fr/mon-espace',lock:true,content:'CAF - Mon compte\n\nConnectez-vous pour accéder à vos allocations\n\nNuméro allocataire : ___\nMot de passe : ___\n\n⚠️ Mise à jour obligatoire de vos coordonnées bancaires avant le 15',isReal:false,expl:"Faux site CAF. Le vrai site est caf.fr. HTTPS présent mais domaine frauduleux. La CAF ne demande JAMAIS vos coordonnées bancaires via un lien email."},
+  {id:'p8',type:'sms',title:'SMS banque frauduleux',from:'+33612345678',subject:'',body:'CREDIT AGRICOLE: Paiement suspect de 847€ détecté. Pour annuler: appelez le 0892 123 456 ou cliquez: https://ca-securite.net/bloquer',isPhish:true,clues:["Numéro inconnu","URL ca-securite.net suspect","Numéro surtaxé 0892","Crée la panique"],expl:"Vishing/Smishing bancaire. Votre banque appelle depuis ses numéros officiels uniquement. En cas de doute, appelez le numéro au dos de votre carte."},
+  {id:'p9',type:'site',title:'Vrai site ameli.fr',url:'https://www.ameli.fr/assure',lock:true,content:'Ameli - Votre compte Assurance Maladie\n\n→ Voir mes remboursements\n→ Commander une carte Vitale\n→ Médecin traitant',isReal:true,expl:"Site officiel de l\'Assurance Maladie. Domaine ameli.fr officiel, HTTPS valide."},
+  {id:'p10',type:'email',title:'Fausse facture EDF gonflée',from:'facture@edf-espace-client.net',subject:'Votre facture EDF — 847,32€',body:'Votre facture EDF de novembre s\'élève à 847,32€.\n\nMontant inhabituel dû à une anomalie.\n\nContestez votre facture :\nhttps://edf-espace-client.net/facture/nov',isPhish:true,clues:["Domaine edf-espace-client.net (pas edf.fr)","Montant exagéré pour choquer","EDF communique depuis edf.fr","Lien suspect"],expl:"Phishing EDF. Montant volontairement exagéré pour faire cliquer. Le vrai site EDF est edf.fr."},
+  {id:'p11',type:'sms',title:'Faux SMS CPF',from:'COMPTE-CPF',subject:'',body:'MonCompteFormation: Votre CPF de 2500€ expire le 31/12. Utilisez-le: https://mon-cpf-formation.fr/utiliser',isPhish:true,clues:["Domaine non officiel","Le vrai site est moncompteformation.gouv.fr","Le CPF n\'expire pas","Urgence artificielle"],expl:"Arnaque au CPF très répandue. Le vrai site est moncompteformation.gouv.fr. Les droits CPF n\'expirent pas."},
+  {id:'p12',type:'site',title:'Vrai site impots.gouv.fr',url:'https://www.impots.gouv.fr/accueil',lock:true,content:'impots.gouv.fr\nDirection Générale des Finances Publiques\n\n→ Accéder à mon espace particulier\n→ Télédéclarer mes revenus\n→ Consulter mes avis d\'imposition',isReal:true,expl:"Site officiel des impôts. Domaine .gouv.fr réservé à l\'État, HTTPS valide."},
+,
+  {id:'c6',tag:'Hexadécimal',pts:150,title:'Le code hex',desc:'Ce message est encodé en hexadécimal. Chaque paire = 1 lettre ASCII.',code:'48 41 43 4B 45 52',answer:'HACKER',hint:'48 en hexa = 72 en décimal = H en ASCII. Continue avec les autres paires.',check:v=>v.toUpperCase().trim()==='HACKER'},
+  {id:'c7',tag:'ROT13',pts:100,title:'Le chiffre ROT13',desc:'ROT13 décale chaque lettre de 13 positions. Décode ce message.',code:'PLORE FRPHEVGR',answer:'CYBER SECURITE',hint:'A devient N, B devient O, C devient P... P devient C, Y devient L, B devient O...',check:v=>v.toUpperCase().replace(/[^A-Z ]/g,'').trim()==='CYBER SECURITE'},
+  {id:'c8',tag:'Substitution',pts:150,title:'Le code alphanumérique',desc:'Chaque lettre est remplacée par sa position dans l\'alphabet. Décode.',code:'19-5-3-18-5-20',answer:'SECRET',hint:'A=1, B=2... S=19, E=5, C=3, R=18, E=5, T=20',check:v=>v.toUpperCase().trim()==='SECRET'},
+  {id:'c9',tag:'OSINT',pts:200,title:'La recherche OSINT',desc:'Quelle organisation française est la référence nationale en cybersécurité ? (sigle 5 lettres)',code:'Indice : agence gouvernementale créée en 2009, publie des recommandations et aide les victimes.',answer:'ANSSI',hint:'Agence Nationale de la Sécurité des Systèmes d\'Information.',check:v=>v.toUpperCase().trim()==='ANSSI'},
+  {id:'c10',tag:'Hexadécimal v2',pts:175,title:'Le drapeau hex',desc:'Décode ce message hexadécimal.',code:'48 41 43 4B',answer:'HACK',hint:'H=48, A=41, C=43, K=4B en hexadécimal.',check:v=>v.toUpperCase().trim()==='HACK'},
+  {id:'c11',tag:'Morse',pts:200,title:'Le message morse',desc:'Décode ce message en code Morse. Point = court, tiret = long.',code:'.-- .. ..-. .. / ... . -.-. ..- .-. .. - .',answer:'WIFI SECURITE',hint:'W=.-- I=.. F=..-. I=.. espace S=... E=. C=-.-. U=..- R=.-. I=.. T=- E=.',check:v=>v.toUpperCase().replace(/[^A-Z ]/g,'').trim().includes('WIFI')},
+  {id:'c12',tag:'Hash MD5',pts:200,title:'Le hash court',desc:'Ce hash MD5 correspond à un mot de 4 chiffres très courant.',code:'827ccb0eea8a706c4c34a16891f84e7b',answer:'12345',hint:'C\'est l\'un des 5 mots de passe les plus utilisés au monde. Très court.',check:v=>v.trim()==='12345'},
+  {id:'c13',tag:'Énigme logique',pts:150,title:'L\'énigme cyber',desc:'Je suis utilisé pour sécuriser les communications sur le web. Je suis un protocole. Je commence par H et finis par S. Que suis-je ?',code:'Indice supplémentaire : tu me vois dans la barre d\'adresse de ton navigateur sous forme de cadenas.',answer:'HTTPS',hint:'HTTP + chiffrement TLS = ?',check:v=>v.toUpperCase().trim()==='HTTPS'},
+  {id:'c14',tag:'Cryptographie',pts:225,title:'Le hash SHA1 courant',desc:'Ce hash SHA1 correspond à un mot très utilisé pour les tests en informatique (4 lettres).',code:'a94a8fe5ccb19ba61c4c0873d391e987982fbbd3',answer:'test',hint:'C\'est le mot qu\'on utilise partout pour tester en développement...',check:v=>v.toLowerCase().trim()==='test'},
+  {id:'c15',tag:'Énigme cyber',pts:175,title:'Qui suis-je ?',desc:'Je suis un numéro de téléphone gratuit. J\'aide les victimes de cyberharcèlement. Je suis disponible 7j/7. Quel est mon numéro ?',code:'Indice : je suis en France, je fais 4 chiffres et je ressemble à l\'année 3018.',answer:'3018',hint:'Numéro national contre le cyberharcèlement, gratuit et anonyme.',check:v=>v.trim()==='3018'},
+,
+  {q:"Tu as des mots de passe de moins de 8 caractères sur certains comptes importants ?",opts:[["Non, tous solides",0],["1 ou 2",1],["Plusieurs",2],["La plupart",3]]},
+  {q:"Tu as activé le 2FA sur tes comptes importants (email, banque) ?",opts:[["Oui partout",0],["Sur la banque seulement",1],["Pas encore",2]]},
+  {q:"Tu as déjà cliqué sur un lien dans un email sans vérifier l'expéditeur ?",opts:[["Jamais",0],["Rarement",1],["Parfois",2],["Souvent",3]]},
+  {q:"Tu connectes ton téléphone à des bornes USB publiques (gares, aéroports) ?",opts:[["Jamais",0],["Parfois avec câble perso",1],["Oui régulièrement",2]]},
+  {q:"Tu utilises un VPN quand tu es sur un Wi-Fi public ?",opts:[["Oui systématiquement",0],["Parfois",1],["Non jamais",2]]},
+  {q:"Tes applications ont-elles accès à ta localisation en permanence ?",opts:[["Non, uniquement lors de l'utilisation",0],["Quelques-unes",1],["La plupart",2],["Toutes",3]]},
+  {q:"Tu as fait une sauvegarde récente de tes données importantes ?",opts:[["Oui, cette semaine",0],["Il y a 1 mois",1],["Il y a plus de 6 mois",2],["Jamais",3]]},
+  {q:"Tu vérifies les avis sur les apps avant de les installer ?",opts:[["Toujours",0],["Parfois",1],["Jamais",2]]},
+
 ];
+
+
+const OSINT_CASES = [
+  {
+    id:'o1',title:'Photo 1',filename:'osint_01.jpg',
+    answer:'1 avenue Victor Hugo, 03000 Moulins — Hôtel du Département de l\'Allier',
+    indices:[
+      'Bâtiment imposant en pierre de taille avec verrière centrale vitrée',
+      'Portail avec grilles bordeaux et panneaux d\'affichage officiels',
+      'Drapeaux tricolores visibles sur la façade',
+      'Panneau visible : "Hôtel du Département"'
+    ],
+    hint:'C\'est un bâtiment administratif départemental des années 80. Il gère tout le département de l\'Allier.'
+  },
+  {
+    id:'o2',title:'Photo 2',filename:'osint_02.jpg',
+    answer:'21 rue de Paris, 03000 Moulins — Hôtel Mercure / Hôtel de Paris',
+    indices:[
+      'Façade en pierre de taille avec auvent rouge à l\'entrée',
+      'Logo Mercure visible sur un panneau à gauche',
+      'Lion en pierre blanc devant l\'entrée',
+      'Boîte aux lettres jaune La Poste devant le bâtiment'
+    ],
+    hint:'C\'est un hôtel 4 étoiles situé sur la Nationale 7, en plein centre historique de Moulins.'
+  },
+  {
+    id:'o3',title:'Photo 3',filename:'osint_03.jpg',
+    answer:'Rue de Paris, 03000 Moulins — Porte de Paris',
+    indices:[
+      'Deux colonnes monumentales carrées en pierre se faisant face',
+      'Vue prise depuis le bas, entre les deux piliers',
+      'Architecture du XVIIIe siècle, style classique',
+      'Monument historique classé depuis 1929'
+    ],
+    hint:'Ces deux colonnes marquaient symboliquement l\'entrée de la ville côté Paris au XVIIIe siècle.'
+  },
+  {
+    id:'o4',title:'Photo 4',filename:'osint_04.jpg',
+    answer:'20 rue Aristide Briand, 03400 Yzeure — ARS Délégation Départementale Allier',
+    indices:[
+      'Bâtiment moderne en courbe avec grandes baies vitrées bleues',
+      'Drapeau tricolore et drapeau européen sur la façade',
+      'Logo République Française visible sur l\'entrée',
+      'Commune d\'Yzeure, limitrophe de Moulins'
+    ],
+    hint:'C\'est un bâtiment public de santé. L\'ARS coordonne la politique de santé dans la région Auvergne-Rhône-Alpes.'
+  },
+  {
+    id:'o5',title:'Photo 5',filename:'osint_05.jpg',
+    answer:'41 place d\'Allier, 03000 Moulins — Brasserie Le France',
+    indices:[
+      'Photo de nuit avec terrasses animées et lumières chaudes',
+      'Enseigne "LE FRANCE" visible en rouge et violet',
+      'Grande place piétonne avec bâtiments haussmanniens',
+      'Plusieurs restaurants et brasseries côte à côte'
+    ],
+    hint:'C\'est la grande place centrale de Moulins, rénovée en 2013 et rendue piétonne. Lieu de vie animé le soir.'
+  },
+  {
+    id:'o6',title:'Photo 6',filename:'osint_06.jpg',
+    answer:'Plan d\'eau des Champins, bords de l\'Allier, 03000 Moulins',
+    indices:[
+      'Photo hivernale avec neige au sol',
+      'Plan d\'eau / étang de 10 hectares visible',
+      'Panneau d\'information vert au bord de l\'eau',
+      'Espace naturel en bordure de l\'Allier, en pleine ville'
+    ],
+    hint:'Ce plan d\'eau est très prisé des pêcheurs et familles moulinoises. Il fait partie d\'un domaine de 56 hectares.'
+  },
+  {
+    id:'o7',title:'Photo 7',filename:'osint_07.jpg',
+    answer:'9 rue de Bad Vilbel, 03000 Moulins — Epitech Moulins',
+    indices:[
+      'Bâtiment moderne avec façade bleue et blanche',
+      'Prairie et arbres autour du bâtiment',
+      'Zone d\'activités en périphérie de Moulins',
+      'Première école informatique d\'excellence implantée dans une ville de moins de 100 000 habitants'
+    ],
+    hint:'C\'est une école d\'informatique fondée en 1999, présente dans 15 villes de France. Elle forme des experts en cybersécurité, IA et ingénierie logicielle.'
+  },
+  {
+    id:'o8',title:'Photo 8',filename:'osint_08.jpg',
+    answer:'Pont Régemortes, 03000 Moulins — sur l\'Allier',
+    indices:[
+      'Vue depuis un pont avec parapet en pierre ancien',
+      'Large rivière visible — l\'Allier',
+      'Ville de Moulins visible en arrière-plan sur la rive gauche',
+      'Poteau de signalisation jaune et marquage routier sur le pont'
+    ],
+    hint:'Ce pont relie Moulins à la rive droite de l\'Allier. C\'est l\'un des ponts historiques de la ville.'
+  },
+  {
+    id:'o9',title:'Photo 9',filename:'osint_09.jpg',
+    answer:'Jardins de Grillet, 03000 Moulins',
+    indices:[
+      'Bras d\'eau calme entouré d\'arbres à feuilles caduques',
+      'Feuilles mortes flottant sur l\'eau — ambiance automnale',
+      'Chemin de promenade longeant le cours d\'eau',
+      'Bâtiment blanc visible au loin à travers les arbres'
+    ],
+    hint:'Ce parc arboré est un espace de promenade apprécié des Moulinois, en bord de cours d\'eau.'
+  },
+  {
+    id:'o10',title:'Photo 10',filename:'osint_10.jpg',
+    answer:'Cours Jean Jaurès, 03000 Moulins',
+    indices:[
+      'Grande allée piétonne avec gravier et arbres alignés',
+      'Bancs publics le long de l\'allée',
+      'Maisons bourgeoises en pierre de taille de chaque côté',
+      'Panneau d\'exposition ou d\'affichage visible à gauche'
+    ],
+    hint:'C\'est l\'un des grands axes du centre-ville de Moulins, réhabilité en promenade piétonne. La CCI de l\'Allier y est installée.'
+  },
+  {
+    id:'o11',title:'Photo 11',filename:'osint_11.jpg',
+    answer:'Quartier Villars, Route de Montilly, 03000 Moulins — CNCS',
+    indices:[
+      'Grand bâtiment en pierre avec sol pavé',
+      'Banderole "10 ANS" répétée sur la façade',
+      'Portes cintrées avec arcs en plein cintre',
+      'Ancienne caserne de cavalerie du XVIIIe siècle reconvertie en musée'
+    ],
+    hint:'C\'est le seul musée au monde entièrement consacré aux costumes et décors de scène. Il conserve plus de 10 000 costumes de l\'Opéra de Paris et de la Comédie-Française.'
+  },
+  {
+    id:'o12',title:'Photo 12',filename:'osint_12.jpg',
+    answer:'Rue du Vert Galant, 03000 Moulins — Jardins bas de la Mal Coiffée',
+    indices:[
+      'Portail en fer forgé bleu-vert avec piliers en pierre',
+      'Jardin à la française visible à travers les grilles',
+      'Flèche gothique de la cathédrale Notre-Dame visible en arrière-plan',
+      'Tour médiévale visible derrière les arbres — le donjon'
+    ],
+    hint:'Ces jardins sont situés au pied du donjon de la Mal Coiffée, ancien château des Ducs de Bourbon. La "Mal Coiffée" tient son nom de son toit jugé disgracieux par Louis XIV.'
+  },
+];
+let osintIdx = 0;
+let osintRevealedIndices = 0;
+let osintSubmissions = {};
+let osintTimerInt = null;
+let osintTimeLeft = 120; // 2 min par défaut
 
 // ── STATE ──
 let ably, channel;
@@ -356,6 +597,11 @@ function initAbly() {
       if (!players[id].emp) players[id].emp = {};
       players[id].emp[qIndex] = val;
       updateLiveEmp();
+    } else if (mod === 'osint') {
+      const { text, team } = answer;
+      const teamDef = teamDefs.find(t => t.name === team);
+      osintSubmissions[id] = { text, team: team||players[id].name, teamColor: teamDef ? teamDef.color : 'var(--green)' };
+      updateOSINTSubmissions();
     } else if (mod === 'ctf') {
       const {challengeId, text} = answer;
       if (!ctfSubmissions[challengeId]) ctfSubmissions[challengeId] = {};
@@ -452,6 +698,7 @@ function switchMod(mod) {
   else if (mod==='ctf') renderCTFCenter();
   else if (mod==='password') renderPwCenter();
   else if (mod==='cyber') renderCyberCenter();
+  else if (mod==='osint') renderOSINTCenter();
 }
 
 function applyTheme() {
@@ -514,7 +761,14 @@ function renderQuizCenter() {
 }
 
 function startQuiz() {
-  quizQ=[...quizQ].sort(()=>Math.random()-.5);
+  const countSel = parseInt(document.getElementById('quiz-count-sel').value)||15;
+  let pool = document.getElementById('theme-sel').value
+    ? QUIZ.filter(q=>q.theme===document.getElementById('theme-sel').value)
+    : [...QUIZ];
+  // Shuffle pool
+  pool = pool.sort(()=>Math.random()-.5);
+  // Take N questions
+  quizQ = countSel > 0 ? pool.slice(0, countSel) : pool;
   quizIdx=-1; quizPhase='question';
   Object.keys(players).forEach(id=>{players[id].score=0;players[id].correct=0;});
   nextQ();
@@ -576,14 +830,14 @@ function updateLiveQuiz() {
 // ══ PHISHING ══
 function renderPhishCenter() {
   const c=document.getElementById('center');
-  const cas=PHISHING_CASES[phishIdx];
+  const cas=getActiveCases()[phishIdx];
   const dots=PHISHING_CASES.map((_,i)=>'<div class="pd '+(i<phishIdx?'done':i===phishIdx?'cur':'')+'" style="max-width:20px"><\/div>').join('');
   c.innerHTML='<div class="card">'
     +'<div class="pdots">'+dots+'<\/div>'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
     +'<span style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:20px;border:1px solid '+(cas.isPhish||!cas.isReal?'var(--red)':'var(--green)')+';color:'+(cas.isPhish||!cas.isReal?'var(--red)':'var(--green)')+'">'+cas.type.toUpperCase()+'<\/span>'
     +'<span style="font-size:14px;font-weight:700">'+cas.title+'<\/span>'
-    +'<span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)">'+(phishIdx+1)+'/'+PHISHING_CASES.length+'<\/span><\/div>'
+    +'<span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)">'+(phishIdx+1)+'/'+getActiveCases().length+'<\/span><\/div>'
     +(cas.type==='email'?
       '<div style="background:var(--bg3);border-radius:8px;overflow:hidden;margin-bottom:12px">'
       +'<div style="padding:9px 12px;background:var(--bg4);font-size:12px;border-bottom:1px solid var(--border)">'
@@ -605,12 +859,32 @@ function renderPhishCenter() {
     +'<div id="phish-rev" style="display:none;padding:12px;border-radius:8px;font-size:13px;line-height:1.6;background:'+(cas.isPhish||!cas.isReal?'rgba(255,68,85,.08)':'rgba(0,255,136,.08)')+';border:1px solid '+(cas.isPhish||!cas.isReal?'var(--red)':'var(--green)')+';color:'+(cas.isPhish||!cas.isReal?'#ff9999':'var(--green)')+'"> '+(cas.isPhish||!cas.isReal?'⚠ PHISHING / FRAUDULEUX':'✓ LÉGITIME')+' — '+cas.expl+'<\/div>'
     +'<div class="flex" style="margin-top:12px">'
     +'<button class="btn bo bsm" onclick="phishIdx=Math.max(0,phishIdx-1);phishAnswers={};renderPhishCenter()" '+(phishIdx===0?'disabled':'')+'>← Préc<\/button>'
-    +'<button class="btn bg bsm" onclick="phishIdx=Math.min(PHISHING_CASES.length-1,phishIdx+1);phishAnswers={};renderPhishCenter()" '+(phishIdx===PHISHING_CASES.length-1?'disabled':'')+'>Suiv →<\/button>'
+    +'<button class="btn bg bsm" onclick="phishIdx=Math.min(PHISHING_CASES.length-1,phishIdx+1);phishAnswers={};renderPhishCenter()" '+(phishIdx===getActiveCases().length-1?'disabled':'')+'>Suiv →<\/button>'
     +'<\/div><\/div>';
   updateLivePhish();
 }
+function shufflePhish() {
+  const count = parseInt(document.getElementById('phish-count-sel').value)||6;
+  const pool = [...PHISHING_CASES].sort(()=>Math.random()-.5);
+  // Replace PHISHING_CASES with shuffled subset for this session
+  window._activeCases = count > 0 ? pool.slice(0, count) : pool;
+  phishIdx = 0; phishAnswers = {};
+  renderPhishCenter();
+  toast('Cas mélangés — '+window._activeCases.length+' cas pour cette session');
+}
+function getActiveCases() { return window._activeCases || PHISHING_CASES; }
+function shuffleAndStartPhish() {
+  const countEl = document.getElementById('phish-count');
+  const n = countEl ? (parseInt(countEl.value)||6) : 6;
+  const shuffled = [...PHISHING_CASES].sort(()=>Math.random()-.5);
+  window._phishPool = n > 0 ? shuffled.slice(0,n) : shuffled;
+  phishIdx = 0; phishAnswers = {};
+  renderPhishCenter();
+  toast('Session melangee — '+window._phishPool.length+' cas');
+}
+function getPhishPool() { return window._phishPool || PHISHING_CASES; }
 function sendPhish() {
-  const cas=PHISHING_CASES[phishIdx]; phishAnswers={};
+  const cas=getPhishPool()[phishIdx]; phishAnswers={};
   pub('host:phishing',{index:phishIdx,cas:{title:cas.title,type:cas.type,from:cas.from||'',subject:cas.subject||'',body:cas.body||cas.content||'',url:cas.url||'',lock:cas.lock||false,isPhish:cas.isPhish!==undefined?cas.isPhish:!cas.isReal},mod:'phishing'});
   toast('Cas envoyé !');
 }
@@ -759,29 +1033,29 @@ function renderCyberCenter() {
 function renderCyberScenario() {
   const s=CYBER_SCENARIOS[cyberIdx];
   const c=document.getElementById('center');
-  const dots=CYBER_SCENARIOS.map((_,i)=>'<div class="pd '+(i<cyberIdx?'done':i===cyberIdx?'cur':'')+'" style="max-width:20px"><\/div>').join('');
+  const dots=CYBER_SCENARIOS.map((_,i)=>'<div class="pd '+(i<cyberIdx?'done':i===cyberIdx?'cur':'')+'" style="max-width:20px"></div>').join('');
   c.innerHTML='<div class="card">'
-    +'<div class="pdots">'+dots+'<\/div>'
+    +'<div class="pdots">'+dots+'</div>'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
-    +'<span style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:20px;border:1px solid var(--red);color:var(--red)">'+s.platform+'<\/span>'
-    +'<span style="font-size:15px;font-weight:700">'+s.title+'<\/span>'
-    +'<span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)">'+(cyberIdx+1)+'/'+CYBER_SCENARIOS.length+'<\/span><\/div>'
-    +'<div style="background:var(--bg3);padding:12px;border-radius:8px;border-left:3px solid var(--red);font-size:13px;margin-bottom:14px;line-height:1.6">'+s.context+'<\/div>'
+    +'<span style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:20px;border:1px solid var(--red);color:var(--red)">'+s.platform+'</span>'
+    +'<span style="font-size:15px;font-weight:700">'+s.title+'</span>'
+    +'<span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)">'+(cyberIdx+1)+'/'+CYBER_SCENARIOS.length+'</span></div>'
+    +'<div style="background:var(--bg3);padding:12px;border-radius:8px;border-left:3px solid var(--red);font-size:13px;margin-bottom:14px;line-height:1.6">'+s.context+'</div>'
     +'<div style="background:var(--bg3);border-radius:8px;overflow:hidden;margin-bottom:14px">'
-    +s.msgs.map(m=>'<div style="padding:8px 12px;font-size:12px;border-bottom:1px solid var(--border);'+(m.d?'background:rgba(255,68,85,.06);':'')+'"><strong style="color:'+(m.d?'var(--red)':'var(--muted)')+'">'+m.s+'<\/strong> '+m.t+'<\/div>').join('')
-    +'<\/div>'
+    +s.msgs.map(m=>'<div style="padding:8px 12px;font-size:12px;border-bottom:1px solid var(--border);'+(m.d?'background:rgba(255,68,85,.06);':'')+'"><strong style="color:'+(m.d?'var(--red)':'var(--muted)')+'">'+m.s+'</strong> '+m.t+'</div>').join('')
+    +'</div>'
     +'<div id="cyber-reveal" style="display:none">'
-    +'<div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:6px">CE QUE DIT LA LOI<\/div>'
-    +'<div style="font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.6">'+s.legal+'<\/div>'
-    +'<div style="font-size:13px;padding:8px;background:rgba(255,68,85,.07);border-radius:6px;border:1px solid rgba(255,68,85,.2);color:#ff9999;margin-bottom:12px">⚖️ '+s.sanctions+'<\/div>'
-    +'<div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:6px">QUE FAIRE<\/div>'
-    +s.queFaire.map(q=>'<div style="font-size:13px;display:flex;gap:8px;margin-bottom:4px"><span style="color:var(--green)">→<\/span>'+q+'<\/div>').join('')
-    +'<\/div>'
+    +'<div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:6px">CE QUE DIT LA LOI</div>'
+    +'<div style="font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.6">'+s.legal+'</div>'
+    +'<div style="font-size:13px;padding:8px;background:rgba(255,68,85,.07);border-radius:6px;border:1px solid rgba(255,68,85,.2);color:#ff9999;margin-bottom:12px">⚖️ '+s.sanctions+'</div>'
+    +'<div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:6px">QUE FAIRE</div>'
+    +s.queFaire.map(q=>'<div style="font-size:13px;display:flex;gap:8px;margin-bottom:4px"><span style="color:var(--green)">→</span>'+q+'</div>').join('')
+    +'</div>'
     +'<div class="flex" style="margin-top:14px">'
-    +'<button class="btn bg" onclick="document.getElementById(\'cyber-reveal\').style.display=\'block\';this.style.display=\'none\'">Révéler les infos →<\/button>'
-    +'<button class="btn bo bsm" onclick="cyberIdx=Math.max(0,cyberIdx-1);renderCyberScenario()" '+(cyberIdx===0?'disabled':'')+'>← Préc<\/button>'
-    +'<button class="btn bg bsm" onclick="cyberIdx=Math.min(CYBER_SCENARIOS.length-1,cyberIdx+1);renderCyberScenario()" '+(cyberIdx===CYBER_SCENARIOS.length-1?'disabled':'')+'>Suiv →<\/button>'
-    +'<\/div><\/div>';
+    +'<button class="btn bg" onclick="document.getElementById(\'cyber-reveal\').style.display=\'block\';this.style.display=\'none\'">Révéler les infos →</button>'
+    +'<button class="btn bo bsm" onclick="cyberIdx=Math.max(0,cyberIdx-1);renderCyberScenario()" '+(cyberIdx===0?'disabled':'')+'>← Préc</button>'
+    +'<button class="btn bg bsm" onclick="cyberIdx=Math.min(CYBER_SCENARIOS.length-1,cyberIdx+1);renderCyberScenario()" '+(cyberIdx===CYBER_SCENARIOS.length-1?'disabled':'')+'>Suiv →</button>'
+    +'</div></div>';
 }
 
 // ── TOAST ──
@@ -791,7 +1065,7 @@ function toast(msg) {
 }
 
 // ── INIT ──
-initAbly();
+window.addEventListener('load', function(){ if(typeof Ably!=='undefined'){initAbly();}else{var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/ably/ably.min.js';s.onload=initAbly;document.head.appendChild(s);}});
 </script>
 </body>
 </html>

@@ -114,6 +114,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--s
 /* SCORE BAR */
 .sbar{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:7px 14px;display:flex;align-items:center;gap:10px;font-size:12px;z-index:10}
 .sbar.hidden{display:none}
+/* OSINT */
+#screen-osint{padding:0;justify-content:flex-start;align-items:stretch}
+.chdr{padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
 </style>
 </head>
 <body>
@@ -224,6 +227,37 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--s
   <div style="margin-top:16px;font-size:12px;color:var(--muted);font-family:var(--mono)">Merci d'avoir joué !</div>
 </div>
 
+<!-- OSINT -->
+<div class="screen hidden" id="screen-osint">
+  <div class="chdr" style="width:100%;text-align:left">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:20px;border:1px solid #cc88ff;color:#cc88ff">OSINT</span>
+      <span style="font-size:14px;font-weight:700" id="osint-title">Photo</span>
+      <span style="margin-left:auto;font-size:11px;font-family:var(--mono);color:var(--muted)" id="osint-ctr">1/15</span>
+    </div>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:14px;width:100%;padding-bottom:52px">
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:14px;min-height:180px;display:flex;align-items:center;justify-content:center">
+      <div id="osint-img-zone" style="text-align:center;padding:20px;color:var(--muted)">
+        <div style="font-size:32px;margin-bottom:8px">🖼️</div>
+        <div style="font-size:12px;font-family:var(--mono)">En attente de la photo...</div>
+      </div>
+    </div>
+    <div id="osint-indices-player" style="margin-bottom:14px"></div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:12px;font-family:var(--mono);color:var(--muted);margin-bottom:6px;letter-spacing:1px">TON HYPOTHÈSE — ADRESSE / LOCALISATION</div>
+      <textarea id="osint-answer-txt" placeholder="Ex: 12 rue de la Paix, Paris 75001&#10;&#10;Décris ce que tu vois..." style="background:var(--bg2);border:2px solid var(--border);border-radius:10px;padding:12px;font-size:14px;font-family:var(--sans);color:var(--text);width:100%;min-height:80px;outline:none;resize:vertical;line-height:1.5"></textarea>
+    </div>
+    <div id="osint-timer-player" style="margin-bottom:14px;display:none">
+      <div class="tbar"><div class="tfill" id="osint-ptfill" style="width:100%;background:var(--green)"></div></div>
+      <div style="font-family:var(--mono);font-size:28px;font-weight:700;text-align:center;margin-top:6px" id="osint-ptnum">—</div>
+    </div>
+    <button id="osint-submit-btn" onclick="submitOSINT()" style="width:100%;background:var(--green);color:#000;border:none;border-radius:10px;padding:14px;font-size:16px;font-weight:800;cursor:pointer;font-family:var(--sans)">Envoyer ma réponse →</button>
+    <div id="osint-sent-msg" style="display:none;text-align:center;padding:12px;color:var(--green);font-family:var(--mono);font-size:13px">✓ Réponse envoyée ! En attente de la révélation...</div>
+    <div id="osint-reveal-player" style="display:none;margin-top:12px;padding:14px;background:rgba(0,255,136,.08);border:1px solid var(--green);border-radius:8px;color:var(--green);font-size:14px;font-weight:700"></div>
+  </div>
+</div>
+
 <!-- SCORE BAR -->
 <div class="sbar hidden" id="sbar">
   <div style="font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="sb-name"></div>
@@ -246,6 +280,7 @@ let answered = false, myAns = -1;
 let currentCTF = null, ctfDone = false;
 let phishVoted = undefined;
 let eqAnswer = null, eqIdx = 0;
+let osintPtimer = null, osintPtimerTotal = 120;
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
@@ -449,6 +484,65 @@ function subscribeAll() {
     }
   });
 
+  channel.subscribe('host:osint', msg => {
+    const {title, index, total, filename} = msg.data;
+    document.getElementById('osint-title').textContent = title;
+    document.getElementById('osint-ctr').textContent = (index+1)+'/'+total;
+    document.getElementById('osint-img-zone').innerHTML = '<img src="'+filename+'" style="max-width:100%;max-height:300px;border-radius:8px" onerror="this.parentElement.innerHTML=\'<div style=\\\'padding:20px;text-align:center;color:var(--muted)\\\'><div style=\\\'font-size:32px\\\'>🖼️</div><div>'+filename+'</div></div>\'" />';
+    document.getElementById('osint-answer-txt').value = '';
+    document.getElementById('osint-submit-btn').style.display = 'block';
+    document.getElementById('osint-sent-msg').style.display = 'none';
+    document.getElementById('osint-reveal-player').style.display = 'none';
+    document.getElementById('osint-indices-player').innerHTML = '';
+    document.getElementById('osint-timer-player').style.display = 'none';
+    showScreen('osint');
+    document.getElementById('sbar').classList.remove('hidden');
+    updateSbar();
+  });
+
+  channel.subscribe('host:osint_indice', msg => {
+    const el = document.getElementById('osint-indices-player');
+    if (!el) return;
+    const current = el.querySelectorAll('.osint-ind').length;
+    const div = document.createElement('div');
+    div.className = 'osint-ind';
+    div.style.cssText = 'display:flex;gap:8px;padding:7px 10px;background:var(--bg2);border-radius:6px;margin-bottom:5px;font-size:13px;border:1px solid var(--border)';
+    div.innerHTML = '<span style="color:var(--amber);font-family:var(--mono);flex-shrink:0">'+(current+1)+'.</span><span>'+msg.data.text+'</span>';
+    el.appendChild(div);
+  });
+
+  channel.subscribe('host:osint_timer', msg => {
+    const timerEl = document.getElementById('osint-timer-player');
+    if (timerEl) timerEl.style.display = 'block';
+    osintPtimerTotal = msg.data.duration;
+    clearInterval(osintPtimer);
+    let left = msg.data.duration;
+    osintPtimer = setInterval(() => {
+      left = Math.max(0, left-1);
+      const pct = left/osintPtimerTotal*100;
+      const col = pct>50?'var(--green)':pct>25?'var(--amber)':'var(--red)';
+      const mins = Math.floor(left/60), secs = left%60;
+      const n = document.getElementById('osint-ptnum'), f = document.getElementById('osint-ptfill');
+      if(n){n.textContent=mins+':'+String(secs).padStart(2,'0');n.style.color=col;}
+      if(f){f.style.width=pct+'%';f.style.background=col;}
+      if(left<=0){clearInterval(osintPtimer);}
+    }, 1000);
+  });
+
+  channel.subscribe('host:osint_reveal', msg => {
+    clearInterval(osintPtimer);
+    const rev = document.getElementById('osint-reveal-player');
+    if (rev) {
+      rev.style.display = 'block';
+      rev.textContent = '✓ Réponse : ' + (msg.data.answer || 'Non renseignée');
+    }
+    document.getElementById('osint-submit-btn').style.display = 'none';
+  });
+
+  channel.subscribe('host:osint_end', () => {
+    showWaiting('OSINT terminé — en attente du prochain module...');
+  });
+
   window.addEventListener('beforeunload', ()=>channel.publish('player:leave',{id:pid}));
 }
 
@@ -517,6 +611,14 @@ function sendEmp() {
 }
 
 // CTF
+function submitOSINT() {
+  const txt = document.getElementById('osint-answer-txt').value.trim();
+  if (!txt) return;
+  channel.publish('player:answer', {id:pid, answer:{text:txt, team:myTeam}, mod:'osint'});
+  document.getElementById('osint-submit-btn').style.display = 'none';
+  document.getElementById('osint-sent-msg').style.display = 'block';
+}
+
 function submitCTF() {
   if (!currentCTF||ctfDone) return;
   const val=document.getElementById('c-inp').value.trim();
