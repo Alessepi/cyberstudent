@@ -611,8 +611,8 @@ function initAbly() {
 
 function autoInitTeams() {
   teamDefs = [0,1,2].map(i => ({
-    name: document.getElementById('tn'+i).value.trim() || ('Équipe '+(i+1)),
-    color: document.getElementById('tc'+i).value
+    name: (document.getElementById('tn'+i).value||'').trim() || ('Équipe '+(i+1)),
+    color: document.getElementById('tc'+i).value || ['#ff4455','#4488ff','#00ff88'][i]
   }));
 }
 
@@ -656,10 +656,21 @@ function updateLiveTeams() {
 }
 function updateTeamSB() {
   const el = document.getElementById('team-sb');
-  if (!teamDefs.length) { el.innerHTML='<div style="font-size:11px;color:var(--muted)">Envoie les équipes →<\/div>'; return; }
-  const sorted = teamDefs.map(t=>{const m=Object.values(players).filter(p=>p.team===t.name);return{name:t.name,color:t.color,total:m.reduce((s,p)=>s+p.score,0),count:m.length};}).sort((a,b)=>b.total-a.total);
+  if (!teamDefs.length) { el.innerHTML='<div style="font-size:11px;color:var(--muted)">Envoie les équipes →</div>'; return; }
+  const sorted = teamDefs.map(t=>{
+    const m = Object.values(players).filter(p=>p.team===t.name);
+    const total = m.reduce((s,p)=>s+p.score,0);
+    return {name:t.name, color:t.color, total, count:m.length};
+  }).sort((a,b)=>b.total-a.total);
   const r=['🥇','🥈','🥉'];
-  el.innerHTML = sorted.map((t,i)=>'<div class="trow" style="border-left-color:'+t.color+'"><span>'+r[i]+'<\/span><span style="font-size:12px;font-weight:700;color:'+t.color+';flex:1;margin:0 6px">'+t.name+'<\/span><span style="font-size:10px;color:var(--muted)">'+t.count+'👤<\/span><span style="font-family:var(--mono);font-size:13px;color:'+t.color+'">'+t.total+'<\/span><\/div>').join('');
+  el.innerHTML = sorted.map((t,i)=>
+    '<div class="trow" style="border-left-color:'+t.color+'">'
+    +'<span>'+r[i]+'</span>'
+    +'<span style="font-size:12px;font-weight:700;color:'+t.color+';flex:1;margin:0 6px">'+t.name+'</span>'
+    +'<span style="font-size:10px;color:var(--muted)">'+t.count+'👤</span>'
+    +'<span style="font-family:var(--mono);font-size:14px;font-weight:700;color:'+t.color+'"> '+t.total+' pts</span>'
+    +'</div>'
+  ).join('');
 }
 
 // ── RIGHT PANEL ──

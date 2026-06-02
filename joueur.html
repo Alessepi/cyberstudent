@@ -268,7 +268,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--s
 <script>
 const ABLY_KEY = 'evrpcQ.X7n3VQ:x9AMe7ScSb_lWITGg7KHRUTka7B9ltfMGB0tTiULt9w';
 let ably, channel;
-let pid = 'p_' + Math.random().toString(36).substr(2,8);
+let pid = 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2,6);
 let pname = '', room = '', myTeam = null, myScore = 0, myCorrect = 0;
 let teams = [
   {name:'Équipe Rouge', color:'#ff4455', count:0},
@@ -318,7 +318,7 @@ function joinRoom() {
   errEl.textContent='';
   document.getElementById('jbtn').disabled=true;
   document.getElementById('jbtn').textContent='Connexion...';
-  ably = new Ably.Realtime({ key: ABLY_KEY, clientId: pid });
+  ably = new Ably.Realtime({ key: ABLY_KEY });
   ably.connection.on('connected', () => {
     channel = ably.channels.get('cyberconf-'+code);
     subscribeAll();
