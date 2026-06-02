@@ -572,7 +572,11 @@ function initAbly() {
 
   channel.subscribe('player:answer', msg => {
     const {id, answer, timeRemaining, mod} = msg.data;
-    if (!players[id]) return;
+    // Auto-register joueur si inconnu (reconnexion possible)
+    if (!players[id]) {
+      const team = msg.data.team || null;
+      players[id] = {name: team || ('Joueur-'+id.substr(-4)), team, score:0, correct:0, answered:false};
+    }
     if (mod === 'quiz') {
       if (quizAnswers[id] !== undefined) return;
       quizAnswers[id] = answer;

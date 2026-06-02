@@ -391,18 +391,19 @@ function subscribeAll() {
     const {correct, correctText, expl, scores} = msg.data;
     const wasCorrect = answered && myAns===correct;
     // Try individual score first, then team score
-    if (scores&&scores[pid]) {
-      const pts = scores[pid].score - myScore;
-      myScore = scores[pid].score; myCorrect = scores[pid].correct;
-      showResult(wasCorrect, correct, correctText, pts, expl);
+    // Priorité : score individuel → score équipe → 0
+    let pts = 0;
+    if (scores && scores[pid]) {
+      pts = scores[pid].score - myScore;
+      myScore = scores[pid].score;
+      myCorrect = scores[pid].correct;
     } else if (msg.data.teamScores && myTeam && msg.data.teamScores[myTeam]) {
-      const ts = msg.data.teamScores[myTeam];
-      const pts = ts.score - myScore;
-      myScore = ts.score;
-      showResult(wasCorrect, correct, correctText, Math.max(0,pts), expl);
-    } else {
-      showResult(wasCorrect, correct, correctText, 0, expl);
+      pts = msg.data.teamScores[myTeam].score - myScore;
+      myScore = msg.data.teamScores[myTeam].score;
     }
+    // Si bonne réponse et pts=0, donner quand même un minimum
+    if (wasCorrect && pts <= 0) pts = 50;
+    showResult(wasCorrect, correct, correctText, Math.max(0,pts), expl);
   });
 
   channel.subscribe('host:podium', msg => {
@@ -581,7 +582,7 @@ function submitQuiz(i) {
     else b.style.opacity='.35';
   });
   console.log('[JOUEUR] envoi answer:', i, 'room:', room, 'pid:', pid);
-  channel.publish('player:answer',{id:pid,answer:i,timeRemaining:timeLeft,mod:'quiz'});
+  channel.publish('player:answer',{id:pid,answer:i,timeRemaining:timeLeft,mod:'quiz',team:myTeam});
 }
 function startClientTimer() {
   clearInterval(timerInt);
@@ -618,7 +619,7 @@ function votePhish(isPhish) {
   document.getElementById('vbtn-legit').disabled=true;
   document.getElementById('vbtn-phish').style.opacity=isPhish?'1':'.3';
   document.getElementById('vbtn-legit').style.opacity=!isPhish?'1':'.3';
-  channel.publish('player:answer',{id:pid,answer:isPhish,mod:'phishing'});
+  channel.publish('player:answer',{id:pid,answer:isPhish,mod:'phishing',team:myTeam});
   showWaiting('Vote envoyé !\nEn attente de la révélation...');
 }
 
@@ -630,7 +631,7 @@ function selectEQ(i) {
 }
 function sendEmp() {
   if (eqAnswer===null) return;
-  channel.publish('player:answer',{id:pid,answer:{qIndex:eqIdx,val:eqAnswer},mod:'empreinte'});
+  channel.publish('player:answer',{id:pid,answer:{qIndex:eqIdx,val:eqAnswer},mod:'empreinte',team:myTeam});
   document.getElementById('eq-send').disabled=true;
   document.getElementById('eq-send').textContent='✓ Réponse envoyée';
   showWaiting('Réponse envoyée !\nEn attente de la prochaine question...');
@@ -649,7 +650,7 @@ function submitCTF() {
   if (!currentCTF||ctfDone) return;
   const val=document.getElementById('c-inp').value.trim();
   if (!val) return;
-  channel.publish('player:answer',{id:pid,answer:{challengeId:currentCTF.challengeId,text:val},mod:'ctf'});
+  channel.publish('player:answer',{id:pid,answer:{challengeId:currentCTF.challengeId,text:val},mod:'ctf',team:myTeam});
 }
 function toggleHint() {
   const h=document.getElementById('c-hint');
