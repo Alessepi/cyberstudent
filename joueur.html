@@ -383,6 +383,9 @@ function subscribeAll() {
 
   channel.subscribe('host:reveal', msg => {
     if (msg.data.mod==='phishing') {
+      console.log('[JOUEUR] phishing reveal recu, scores:', JSON.stringify(msg.data.scores||{}));
+      console.log('[JOUEUR] mon pid:', pid, 'mon team:', myTeam);
+      const wasRight = phishVoted === msg.data.isPhish;
       // Mettre à jour le score
       let pts = 0;
       if (msg.data.scores && msg.data.scores[pid]) {
@@ -392,8 +395,13 @@ function subscribeAll() {
       } else if (msg.data.teamScores && myTeam && msg.data.teamScores[myTeam]) {
         pts = msg.data.teamScores[myTeam].score - myScore;
         myScore = msg.data.teamScores[myTeam].score;
+      } else if (wasRight) {
+        // Fallback : calculer localement si bonne réponse
+        pts = 100;
+        myScore += 100;
+        myCorrect++;
       }
-      const wasRight = phishVoted === msg.data.isPhish;
+      console.log('[JOUEUR] wasRight:', wasRight, 'pts:', pts, 'myScore:', myScore);
       document.getElementById('r-icon').textContent = wasRight ? '✅' : '❌';
       document.getElementById('r-title').textContent = wasRight ? 'Bonne analyse !' : 'Raté !';
       document.getElementById('r-pts').textContent = pts > 0 ? '+'+pts : '+0';
@@ -661,7 +669,9 @@ function votePhish(isPhish) {
   document.getElementById('vbtn-phish').style.opacity=isPhish?'1':'.3';
   document.getElementById('vbtn-legit').style.opacity=!isPhish?'1':'.3';
   channel.publish('player:answer',{id:pid,answer:isPhish,mod:'phishing',team:myTeam});
-  showWaiting('Vote envoyé !\nEn attente de la révélation...');
+  // Ne pas changer d'écran - attendre host:reveal pour afficher le résultat
+  document.getElementById('vbtn-phish').style.opacity = isPhish ? '1' : '.3';
+  document.getElementById('vbtn-legit').style.opacity = !isPhish ? '1' : '.3';
 }
 
 // EMPREINTE

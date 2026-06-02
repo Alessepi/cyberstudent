@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cyber Conf — Animateur</title>
+<script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--green:#00ff88;--red:#ff4455;--amber:#ffaa00;--blue:#4af;--bg:#0a0e14;--bg2:#111620;--bg3:#1a2030;--bg4:#222b3a;--border:rgba(0,255,136,0.12);--border2:rgba(0,255,136,0.28);--text:#e8edf5;--muted:#6b7a8d;--mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans)}
+.app{display:grid;grid-template-rows:52px 1fr;height:100vh}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 16px}
+.logo{font-family:var(--mono);font-size:13px;color:var(--green);letter-spacing:1px}
+.pill{font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid}
+.pill.on{border-color:var(--green);color:var(--green);background:rgba(0,255,136,.08)}
+.pill.off{border-color:var(--red);color:var(--red);background:rgba(255,68,85,.08)}
+.pill.am{border-color:var(--amber);color:var(--amber);background:rgba(255,170,0,.08)}
+.ml{margin-left:auto}
+.main{display:grid;grid-template-columns:240px 1fr 270px;overflow:hidden;height:100%}
+.panel{background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;padding:14px}
+.pr{border-right:none;border-left:1px solid var(--border)}
+.pt{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin:12px 0 6px;padding-top:12px;border-top:1px solid var(--border)}
+.pt.first{margin-top:0;padding-top:0;border-top:none}
+.nb{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--muted);border:1px solid transparent;background:none;width:100%;text-align:left;font-family:var(--sans);transition:all .15s;margin-bottom:3px}
+.nb:hover{background:var(--bg3);color:var(--text)}
+.nb.act{background:var(--bg3);color:var(--green);border-color:var(--border)}
+.nb .ic{width:18px;text-align:center;flex-shrink:0}
+.center{overflow-y:auto;padding:20px;background:var(--bg)}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:14px}
+.btn{padding:9px 18px;border-radius:7px;font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;border:1px solid;transition:all .15s}
+.bg{background:var(--green);color:#000;border-color:var(--green)}.bg:hover{opacity:.85}
+.bo{background:none;color:var(--text);border-color:var(--border2)}.bo:hover{background:var(--bg3)}
+.bsm{padding:5px 11px;font-size:11px}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+input,select,textarea{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-family:var(--sans);font-size:12px;width:100%;outline:none}
+input:focus,select:focus{border-color:var(--border2)}
+.flex{display:flex;gap:8px;align-items:center}
+.sl{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.div{height:1px;background:var(--border);margin:10px 0}
+.srow{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;background:var(--bg3);margin-bottom:5px}
+.sr-rank{font-family:var(--mono);font-size:11px;color:var(--muted);width:18px}
+.sr-name{flex:1;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sr-pts{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--green)}
+.tbar{height:8px;background:var(--bg4);border-radius:4px;overflow:hidden;margin-bottom:14px}
+.tfill{height:100%;border-radius:4px;transition:width 1s linear,background .5s}
+.abar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.abar-lbl{width:22px;font-size:12px;font-weight:700;flex-shrink:0;font-family:var(--mono)}
+.abar-track{flex:1;height:26px;background:var(--bg4);border-radius:5px;overflow:hidden}
+.abar-fill{height:100%;border-radius:5px;transition:width .4s;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:700;color:#000}
+.abar-n{font-family:var(--mono);font-size:11px;color:var(--muted);width:24px;text-align:right;flex-shrink:0}
+.prow{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:6px;background:var(--bg3);margin-bottom:4px}
+.pdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.trow{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;background:var(--bg3);margin-bottom:5px;border-left:3px solid transparent}
+.qr-box{text-align:center;padding:12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);margin-bottom:10px}
+.qr-url{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:6px;word-break:break-all}
+.pdots{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap}
+.pd{height:4px;flex:1;min-width:4px;border-radius:2px;background:var(--bg4)}
+.pd.done{background:var(--green)}.pd.cur{background:var(--amber)}
+.toast{position:fixed;bottom:14px;right:14px;background:var(--bg2);border:1px solid var(--green);border-radius:7px;padding:8px 14px;font-size:11px;font-family:var(--mono);color:var(--green);z-index:99;opacity:0;transform:translateY(16px);transition:all .25s}
+.toast.show{opacity:1;transform:translateY(0)}
+.blink{animation:blink 1s step-end infinite}
+@keyframes blink{50%{opacity:0}}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+.opt-box{padding:11px 14px;border-radius:7px;border:1px solid var(--border);font-size:13px;margin-bottom:8px;background:var(--bg3)}
+.opt-num{font-family:var(--mono);font-weight:700;margin-right:8px;color:var(--amber)}
+.cpick{width:34px;height:30px;border:none;border-radius:5px;cursor:pointer;padding:2px;background:var(--bg4);flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="app">
+  <div class="topbar">
+    <div class="logo">CYBER_CONF<span class="blink">_</span> ANIMATEUR</div>
+    <div class="pill off" id="conn-pill">⬤ Connexion...</div>
+    <div class="pill am" id="room-pill">Room: —</div>
+    <div id="pcount" style="font-family:var(--mono);font-size:11px;color:var(--muted)">0 joueurs</div>
+    <div class="ml flex"><div class="pill am" id="phase-pill">lobby</div></div>
+  </div>
+  <div class="main">
+    <!-- LEFT -->
+    <div class="panel">
+      <div class="pt first">Modules</div>
+      <button class="nb act" id="nb-quiz" onclick="switchMod('quiz')"><span class="ic">❓</span>Quiz / Kahoot</button>
+      <button class="nb" id="nb-phishing" onclick="switchMod('phishing')"><span class="ic">🎣</span>Phishing / Vrai-Fake</button>
+      <button class="nb" id="nb-empreinte" onclick="switchMod('empreinte')"><span class="ic">👣</span>Empreinte Numérique</button>
+      <button class="nb" id="nb-ctf" onclick="switchMod('ctf')"><span class="ic">🚩</span>CTF Initiation</button>
+      <button class="nb" id="nb-password" onclick="switchMod('password')"><span class="ic">🔑</span>Password (démo)</button>
+      <button class="nb" id="nb-cyber" onclick="switchMod('cyber')"><span class="ic">💬</span>Cyberharcèlement</button>
+      <button class="nb" id="nb-osint" onclick="switchMod('osint')"><span class="ic">🔍</span>OSINT — Trouve l'adresse</button>
+
+      <div class="pt">Équipes</div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:7px"><input type="color" class="cpick" id="tc0" value="#ff4455"><input type="text" id="tn0" value="Équipe Rouge"></div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:7px"><input type="color" class="cpick" id="tc1" value="#4488ff"><input type="text" id="tn1" value="Équipe Bleue"></div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:7px"><input type="color" class="cpick" id="tc2" value="#00ff88"><input type="text" id="tn2" value="Équipe Verte"></div>
+      <button class="btn bg bsm" style="width:100%;margin-top:4px" onclick="broadcastTeams()">📡 Envoyer aux joueurs</button>
+      <div id="live-teams" style="margin-top:8px"></div>
+
+      <div class="pt">Quiz — options</div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:7px">
+        <label style="font-size:11px;color:var(--muted);width:50px;flex-shrink:0">Thème</label>
+        <select id="theme-sel" onchange="applyTheme()" style="font-size:11px">
+          <option value="">Tous</option>
+          <option value="Mots de passe">🔑 Mots de passe</option>
+          <option value="Phishing">🎣 Phishing</option>
+          <option value="Réseaux sociaux">📱 Réseaux sociaux</option>
+          <option value="Cadre légal">⚖️ Cadre légal</option>
+          <option value="Malwares">🦠 Malwares</option>
+          <option value="WiFi & réseau">📡 WiFi & réseau</option>
+          <option value="Bonnes pratiques">✅ Pratiques</option>
+          <option value="IA & Deepfakes">🤖 IA & Deepfakes</option>
+          <option value="Métiers cyber">💼 Métiers</option>
+          <option value="Culture cyber">🌐 Culture</option>
+          <option value="Cyberharcèlement">💬 Cyberharcèlement</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:7px">
+        <label style="font-size:11px;color:var(--muted);width:50px;flex-shrink:0">Timer</label>
+        <select id="timer-sel" style="font-size:11px">
+          <option value="10">10s</option><option value="15" selected>15s</option>
+          <option value="20">20s</option><option value="30">30s</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:7px">
+        <label style="font-size:11px;color:var(--muted);width:50px;flex-shrink:0">Nb Q.</label>
+        <select id="quiz-count-sel" style="font-size:11px">
+          <option value="10">10 questions</option>
+          <option value="15" selected>15 questions</option>
+          <option value="20">20 questions</option>
+          <option value="30">30 questions</option>
+          <option value="0">Toutes</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <label style="font-size:11px;color:var(--muted);width:50px;flex-shrink:0">Nb cas</label>
+        <select id="phish-count-sel" style="font-size:11px">
+          <option value="4">4 cas</option>
+          <option value="6" selected>6 cas</option>
+          <option value="8">8 cas</option>
+          <option value="0">Tous</option>
+        </select>
+      </div>
+
+      <div class="pt">Rejoindre</div>
+      <div class="qr-box"><div id="qr-container"></div><div class="qr-url" id="qr-url">En attente de connexion...</div></div>
+      <button class="btn bo bsm" style="width:100%" onclick="copyUrl()">📋 Copier le lien</button>
+    </div>
+
+    <!-- CENTER -->
+    <div class="center" id="center">
+      <div style="text-align:center;padding:60px;color:var(--muted)">
+        <div style="font-size:36px;margin-bottom:12px">⚡</div>
+        <div style="font-family:var(--mono);font-size:13px">Connexion en cours...</div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="panel pr">
+      <div class="pt first">Classement équipes</div>
+      <div id="team-sb"><div style="font-size:11px;color:var(--muted)">Envoie les équipes →</div></div>
+      <div class="pt">Joueurs connectés</div>
+      <div id="players-list"><div style="font-size:11px;color:var(--muted)">En attente...</div></div>
+      <div class="pt">Réponses en direct</div>
+      <div id="live-answers"><div style="font-size:11px;color:var(--muted)">—</div></div>
+      <div class="pt">Scores individuels</div>
+      <div id="indiv-sb"><div style="font-size:11px;color:var(--muted)">Aucun score</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ABLY_KEY = 'evrpcQ.X7n3VQ:x9AMe7ScSb_lWITGg7KHRUTka7B9ltfMGB0tTiULt9w';
+const ROOM = Math.random().toString(36).substr(2,6).toUpperCase();
+
+const QUIZ = [
+  {theme:"Mots de passe",q:"Quelle est la longueur minimale recommandée pour un mot de passe sécurisé ?",opts:["6 caractères", "8 caractères", "12 caractères", "20 caractères"],correct:2,expl:"12 caractères est le minimum recommandé aujourd\'hui. En dessous, un mot de passe peut être cracké en quelques heures avec du matériel moderne. L\'idéal est 16+ caractères."},
+  {theme:"Mots de passe",q:"Qu\'est-ce qu\'un gestionnaire de mots de passe ?",opts:["Un carnet papier sécurisé", "Un logiciel qui génère et stocke des mots de passe chiffrés", "Un service qui remet à zéro vos mots de passe", "Un antivirus spécialisé"],correct:1,expl:"Un gestionnaire comme Bitwarden ou KeePass génère des mots de passe forts et uniques pour chaque site, et les stocke chiffrés. Vous n\'avez à retenir qu\'un seul mot de passe maître."},
+  {theme:"Mots de passe",q:"Lequel de ces mots de passe est le plus sécurisé ?",opts:["P@ssw0rd!", "monanniversary2001", "xK#9mL!vQ2$pN7@w", "Ilovemycat123"],correct:2,expl:"xK#9mL!vQ2$pN7@w est le plus fort : 16 caractères, mélange de majuscules, minuscules, chiffres et symboles, aucun mot du dictionnaire. Les autres contiennent des mots ou patterns prévisibles."},
+  {theme:"Mots de passe",q:"Que signifie 2FA ?",opts:["Two Factor Application", "Two Factor Authentication", "Two Firewall Access", "Two File Archive"],correct:1,expl:"2FA = Two Factor Authentication (authentification à deux facteurs). Elle combine deux éléments : quelque chose que vous savez (mot de passe) et quelque chose que vous avez (téléphone, clé physique)."},
+  {theme:"Mots de passe",q:"Un attaquant obtient ton hash de mot de passe. Quelle attaque utilise-t-il en premier ?",opts:["Attaque par dictionnaire", "SQL injection", "Man-in-the-middle", "DDoS"],correct:0,expl:"L\'attaque par dictionnaire teste des milliers de mots de passe courants hashés. C\'est pourquoi \'password123\' ou \'azerty\' sont dangereux : ils figurent dans toutes ces listes."},
+  {theme:"Mots de passe",q:"Que vaut mieux faire si un site t\'impose un mot de passe de max 8 caractères ?",opts:["Utiliser le même que partout", "Signaler que c\'est une mauvaise pratique de sécurité", "Mettre ton prénom + date de naissance", "C\'est suffisant, 8 caractères c\'est bien"],correct:1,expl:"Limiter à 8 caractères est une mauvaise pratique. Cela indique souvent que le site stocke les mots de passe en clair ou avec un hash faible. Tu peux le signaler ou éviter ce site."},
+  {theme:"Mots de passe",q:"Qu\'est-ce qu\'une attaque brute force sur un mot de passe ?",opts:["Voler physiquement l\'ordinateur", "Tester toutes les combinaisons possibles automatiquement", "Deviner le mot de passe par ingénierie sociale", "Intercepter le mot de passe sur le réseau"],correct:1,expl:"Le brute force teste automatiquement toutes les combinaisons possibles. Un mot de passe de 6 chiffres peut être cracké en secondes. C\'est pourquoi la longueur et la complexité sont essentielles."},
+  {theme:"Mots de passe",q:"Quelle méthode 2FA est la PLUS sécurisée ?",opts:["SMS", "Email", "Application TOTP (Google Authenticator)", "Question secrète"],correct:2,expl:"Une appli TOTP génère des codes temporaires localement. Le SMS est vulnérable au SIM swapping. L\'email peut être compromis. Les questions secrètes sont facilement devinables."},
+  {theme:"Mots de passe",q:"Pour retenir un mot de passe sans gestionnaire, quelle technique est la meilleure ?",opts:["Ton prénom + année de naissance", "Une phrase de passe : MonChatMangeDuRizLeVendredi!", "Le nom de ton animal en majuscules", "Remplacer les a par @ dans un mot courant"],correct:1,expl:"Une phrase de passe longue est facile à retenir et très difficile à craquer. 30 caractères avec variété — bien mieux que des substitutions prévisibles comme a vers @."},
+  {theme:"Mots de passe",q:"Selon l\'ANSSI, quand faut-il changer ses mots de passe ?",opts:["Tous les mois", "Tous les 3 mois", "Seulement en cas de suspicion de compromission", "Tous les ans obligatoirement"],correct:2,expl:"L\'ANSSI recommande de changer un mot de passe uniquement s\'il est compromis ou suspecté de l\'être. Changer trop souvent pousse les utilisateurs à créer des mots de passe plus faibles."},
+  {theme:"Phishing",q:"Quel pourcentage des cyberattaques commence par du phishing ?",opts:["Environ 30%", "Environ 50%", "Plus de 80%", "Moins de 20%"],correct:2,expl:"Plus de 80% des cyberattaques commencent par du phishing. C\'est la technique d\'entrée favorite car il est souvent plus simple de tromper un humain que de casser un système."},
+  {theme:"Phishing",q:"Qu\'est-ce que le spear phishing ?",opts:["Un phishing ciblant les pêcheurs", "Un phishing personnalisé visant une personne ou organisation précise", "Un phishing par SMS", "Un phishing utilisant de faux sites"],correct:1,expl:"Le spear phishing est ciblé : l\'attaquant se renseigne sur sa victime (réseaux sociaux, LinkedIn) pour rédiger un message ultra-personnalisé et crédible, contrairement au phishing de masse."},
+  {theme:"Phishing",q:"Tu reçois un email de ta banque demandant de vérifier ton compte. Que fais-tu ?",opts:["Tu cliques sur le lien et renseignes tes infos", "Tu appelles le numéro dans l\'email", "Tu vas directement sur le site officiel de ta banque", "Tu réponds à l\'email"],correct:2,expl:"Va toujours directement sur le site officiel en tapant l\'URL toi-même. Ne clique jamais sur les liens d\'emails urgents. Les banques ne demandent jamais tes identifiants par email."},
+  {theme:"Phishing",q:"Qu\'est-ce que le vishing ?",opts:["Phishing par email", "Phishing par SMS", "Phishing par appel téléphonique", "Phishing via les réseaux sociaux"],correct:2,expl:"Le vishing (voice phishing) utilise des appels téléphoniques. L\'attaquant se fait passer pour une banque, la police ou un support technique pour obtenir des informations sensibles."},
+  {theme:"Phishing",q:"Comment reconnaître un email de phishing ?",opts:["Fautes d\'orthographe uniquement", "Expéditeur inconnu uniquement", "Urgence + lien suspect + expéditeur douteux + demande d\'infos sensibles", "Logo de mauvaise qualité uniquement"],correct:2,expl:"Un phishing combine souvent : urgence artificielle, lien suspect, adresse email bizarre, demande de mot de passe ou numéro de carte. Un seul indice ne suffit pas."},
+  {theme:"Phishing",q:"Qu\'est-ce que le smishing ?",opts:["Phishing par email", "Phishing par SMS", "Phishing par appel téléphonique", "Phishing par courrier postal"],correct:1,expl:"Le smishing = SMS + phishing. Tu reçois un SMS d\'un faux livreur, fausse banque ou faux gouvernement avec un lien malveillant. Les SMS semblent plus dignes de confiance que les emails."},
+  {theme:"Phishing",q:"Un collègue te demande par email de virer de l\'argent en urgence de la part du directeur. C\'est quoi ?",opts:["Une demande légitime si elle vient d\'un email pro", "Une fraude au président (BEC)", "Du spear phishing uniquement", "Une attaque par ransomware"],correct:1,expl:"C\'est une fraude au président (BEC). Les attaquants usurpent l\'identité d\'un dirigeant pour faire des virements urgents. Toujours vérifier par téléphone avant tout virement."},
+  {theme:"Phishing",q:"HTTPS dans l\'URL garantit que...",opts:["Le site est légitime et sécurisé", "La connexion est chiffrée mais le site peut être frauduleux", "Le site est certifié par le gouvernement", "Aucune donnée ne peut être volée"],correct:1,expl:"HTTPS chiffre la connexion entre toi et le site, mais ne garantit PAS la légitimité du site. Un site de phishing peut avoir un certificat HTTPS valide. Vérifie toujours le domaine exact."},
+  {theme:"Phishing",q:"Tu survoles un lien et l\'URL est amaz0n.fr. Que fais-tu ?",opts:["Tu cliques, c\'est probablement une faute de frappe", "Tu ignores le lien et vas sur amazon.fr directement", "Tu cliques si le texte affiche Amazon", "Tu envoies l\'email à tes amis"],correct:1,expl:"amaz0n (avec un zéro) est un domaine frauduleux imitant Amazon. Cette technique s\'appelle le typosquatting. Toujours vérifier l\'URL exacte, jamais le texte affiché du lien."},
+  {theme:"Phishing",q:"Qu\'est-ce que l\'ingénierie sociale ?",opts:["Construire des serveurs sécurisés", "Manipuler psychologiquement des personnes pour obtenir des informations ou accès", "Programmer des algorithmes de sécurité", "Analyser le code source de logiciels"],correct:1,expl:"L\'ingénierie sociale exploite la psychologie humaine : urgence, autorité, peur, curiosité. C\'est souvent plus efficace que les attaques techniques. Kevin Mitnick l\'utilisait principalement."},
+  {theme:"Réseaux sociaux",q:"Qu\'est-ce que l\'empreinte numérique ?",opts:["Un scanner d\'empreinte digitale", "L\'ensemble des traces laissées par ton activité en ligne", "Ton profil sur les réseaux sociaux uniquement", "Ton historique de navigation"],correct:1,expl:"L\'empreinte numérique englobe tout : historique, posts, likes, localisation, achats, recherches... Ces données permettent de construire un profil très précis de toi."},
+  {theme:"Réseaux sociaux",q:"Pourquoi est-il dangereux de publier une photo de tes billets d\'avion ?",opts:["Les billets peuvent être revendus", "Le code-barres contient tes données personnelles", "Ça révèle que tu seras absent de chez toi", "Les deux dernières réponses sont correctes"],correct:3,expl:"Double danger : le code-barres contient des infos personnelles, et publier une photo annonce que tu seras absent, ce qui peut attirer les cambrioleurs."},
+  {theme:"Réseaux sociaux",q:"Facebook/Meta utilise tes données principalement pour...",opts:["Améliorer la sécurité d\'internet", "Vendre des publicités ciblées", "Partager avec les gouvernements", "Faire de la recherche médicale"],correct:1,expl:"Le modèle économique des réseaux sociaux gratuits repose sur la publicité ciblée. Tes données sont analysées pour afficher des pubs ultra-personnalisées."},
+  {theme:"Réseaux sociaux",q:"Qu\'est-ce que le doxing ?",opts:["Publier des documents confidentiels d\'une entreprise", "Collecter et publier les infos personnelles d\'une personne sans son consentement", "Pirater un compte de réseau social", "Supprimer ses données en ligne"],correct:1,expl:"Le doxing consiste à publier des infos personnelles (adresse, téléphone...) pour nuire. C\'est illégal en France et peut mener à du harcèlement, des menaces ou pire."},
+  {theme:"Réseaux sociaux",q:"Que signifie privacy by default ?",opts:["Les données sont publiques par défaut", "Les paramètres les plus protecteurs sont activés par défaut", "L\'utilisateur choisit tout à l\'inscription", "La vie privée est garantie par la loi"],correct:1,expl:"Privacy by default signifie que le maximum de protection est activé sans action de l\'utilisateur. C\'est une exigence du RGPD pour les entreprises."},
+  {theme:"Réseaux sociaux",q:"Tu supprimes ton compte Instagram. Tes données sont-elles effacées immédiatement ?",opts:["Oui, immédiatement", "Non, conservées jusqu\'à 90 jours", "Non, conservées indéfiniment", "Oui, mais seulement les photos"],correct:1,expl:"Meta conserve les données jusqu\'à 90 jours après suppression. Les données partagées avec d\'autres (messages, commentaires) peuvent persister. La suppression numérique n\'est jamais instantanée."},
+  {theme:"Réseaux sociaux",q:"Qu\'est-ce qu\'un réseau social utilise pour maximiser ton temps d\'écran ?",opts:["Un algorithme basé sur ta popularité", "Un algorithme optimisé pour maximiser ton engagement", "Un système de vote communautaire", "Un tirage au sort équitable"],correct:1,expl:"Les algorithmes favorisent le contenu émotionnel, choquant ou polémique car il génère plus de clics et likes. Ils sont optimisés pour ton engagement, pas ton bien-être."},
+  {theme:"Réseaux sociaux",q:"Quel risque y a-t-il à utiliser Se connecter avec Google sur d\'autres sites ?",opts:["Aucun, c\'est plus sécurisé", "Google accède aux données et si ton compte est piraté tous les sites liés sont compromis", "Ton mot de passe Google est partagé", "C\'est interdit par le RGPD"],correct:1,expl:"En centralisant via Google/Facebook, si ce compte est compromis, tous les services liés le sont aussi. Pratique mais risqué."},
+  {theme:"Réseaux sociaux",q:"Quel est le danger de publier ta localisation en temps réel ?",opts:["Aucun si tes amis sont de confiance", "Révéler que tu es absent et permettre de te localiser physiquement", "Seulement un risque de spam", "Uniquement si le compte est public"],correct:1,expl:"Risques : cambriolage, stalking, agression. Même en compte privé, tes amis peuvent partager ces infos. Ne jamais publier sa localisation en temps réel."},
+  {theme:"Réseaux sociaux",q:"Qu\'est-ce que l\'OSINT ?",opts:["Un type de ransomware", "La collecte d\'informations à partir de sources publiques", "Un protocole de chiffrement", "Un type d\'antivirus"],correct:1,expl:"OSINT = Open Source Intelligence. Collecte d\'infos disponibles publiquement (réseaux sociaux, sites web, registres...). Utilisé par chercheurs et journalistes, mais aussi par les attaquants."},
+  {theme:"Cadre légal",q:"Quelle loi française punit l\'accès non autorisé à un système informatique ?",opts:["Loi Informatique et Libertés", "Loi Godfrain (1988)", "RGPD", "Loi HADOPI"],correct:1,expl:"La loi Godfrain (1988) punit l\'accès frauduleux à un système : jusqu\'à 2 ans de prison et 60 000€ d\'amende, même sans modification des données."},
+  {theme:"Cadre légal",q:"Que signifie RGPD ?",opts:["Règlement Général sur la Protection des Données", "Réseau Global de Protection Digitale", "Règlement sur la Gestion des Programmes Dangereux", "Registre Général des Personnes en Danger"],correct:0,expl:"Le RGPD (2018) est le règlement européen sur la protection des données personnelles. Il donne aux citoyens des droits sur leurs données et impose des obligations aux entreprises."},
+  {theme:"Cadre légal",q:"Un mineur de 15 ans pirate le site de son école pour rire. Que risque-t-il ?",opts:["Rien, il est mineur", "Un simple avertissement scolaire", "Des poursuites pénales adaptées aux mineurs", "Uniquement une amende de ses parents"],correct:2,expl:"La minorité n\'exonère pas de responsabilité pénale. Un mineur peut être jugé par un tribunal pour enfants et faire l\'objet de mesures éducatives ou d\'emprisonnement."},
+  {theme:"Cadre légal",q:"Quelle est la sanction maximale RGPD pour une entreprise ?",opts:["1 000€", "10 000€", "20 millions d euros ou 4% du CA mondial", "100 000€"],correct:2,expl:"Le RGPD prévoit des amendes jusqu\'à 20 millions d\'euros ou 4% du CA mondial. Amazon a reçu 746 millions d\'euros d\'amende en 2021."},
+  {theme:"Cadre légal",q:"Qu\'est-ce que l\'ANSSI ?",opts:["Association Nationale de Sécurité des SI", "Agence Nationale de la Sécurité des Systèmes d\'Information", "Administration Nationale des Services Secrets", "Autorité Nationale de Surveillance Internet"],correct:1,expl:"L\'ANSSI est l\'agence gouvernementale française de cybersécurité. Elle publie des recommandations, aide les victimes et défend les systèmes critiques de l\'État."},
+  {theme:"Cadre légal",q:"Est-il légal de scanner un site sans autorisation même sans exploiter les failles ?",opts:["Oui si on ne modifie rien", "Oui si c\'est pour aider le site", "Non, le simple scan non autorisé est illégal", "Oui si on est chercheur en sécurité"],correct:2,expl:"Scanner un système sans autorisation explicite est illégal en France, même sans intention malveillante. Les programmes de bug bounty encadrent légalement ces recherches."},
+  {theme:"Cadre légal",q:"Que protège principalement la directive NIS 2 ?",opts:["Les données personnelles des citoyens", "La cybersécurité des secteurs critiques (hôpitaux, énergie, transports)", "Les droits d\'auteur sur internet", "La liberté d\'expression en ligne"],correct:1,expl:"NIS 2 impose des obligations de cybersécurité aux opérateurs essentiels : hôpitaux, énergie, eau, transport, banques, avec des sanctions en cas de non-conformité."},
+  {theme:"Cadre légal",q:"Le cyberharcèlement est-il un délit en France ?",opts:["Non, c\'est uniquement civil", "Oui, jusqu\'à 2 ans de prison et 30 000€", "Oui, mais seulement si la victime est mineure", "Non si ça se passe sur les réseaux sociaux"],correct:1,expl:"Le cyberharcèlement est un délit pénal (loi 2018). Si victime mineure : 3 ans et 45 000€. Les auteurs peuvent être anonymes et quand même retrouvés."},
+  {theme:"Cadre légal",q:"Qu\'est-ce qu\'un programme de bug bounty ?",opts:["Un concours de piratage illégal", "Un programme officiel autorisant des chercheurs à tester la sécurité en échange d\'une récompense", "Un logiciel de détection de bugs", "Une prime versée aux victimes de cyberattaques"],correct:1,expl:"Un bug bounty est un programme légal où une organisation invite des hackers éthiques à chercher des vulnérabilités en échange d\'une récompense. C\'est encadré et légal."},
+  {theme:"Cadre légal",q:"Que signifie responsabilité pénale dans le piratage ?",opts:["Payer des dommages et intérêts", "Risquer une sanction pénale (amende, prison) prononcée par un tribunal", "Être renvoyé de son école", "Recevoir un avertissement"],correct:1,expl:"La responsabilité pénale signifie risquer une peine (amende, prison, TIG). Elle s\'applique dès 13 ans en France pour les infractions graves."},
+  {theme:"Malwares",q:"Qu\'est-ce qu\'un ransomware ?",opts:["Un logiciel espion", "Un logiciel qui chiffre tes fichiers et demande une rançon", "Un virus qui efface le disque dur", "Un logiciel de publicité intrusive"],correct:1,expl:"Un ransomware chiffre les fichiers de la victime et exige le paiement d\'une rançon pour la clé de déchiffrement. WannaCry (2017) a touché 300 000 ordinateurs dans 150 pays."},
+  {theme:"Malwares",q:"Quel hôpital français a été victime d\'un ransomware majeur en 2022 ?",opts:["Hôpital de Paris", "Centre Hospitalier de Corbeil-Essonnes", "Hôpital de Lyon", "Clinique de Bordeaux"],correct:1,expl:"Le CH de Corbeil-Essonnes a été paralysé par Ragnar Locker en 2022. Les attaquants ont réclamé 10 millions de dollars. L\'hôpital a fonctionné en mode dégradé pendant des semaines."},
+  {theme:"Malwares",q:"Qu\'est-ce qu\'un cheval de Troie ?",opts:["Un virus qui se reproduit seul", "Un malware qui se cache dans un logiciel légitime en apparence", "Un logiciel espion gouvernemental", "Un ver informatique"],correct:1,expl:"Comme dans la mythologie, un Trojan se cache dans un logiciel apparemment utile. Une fois installé, il peut voler des données, ouvrir une backdoor ou télécharger d\'autres malwares."},
+  {theme:"Malwares",q:"Que faire si tu es victime d\'un ransomware ?",opts:["Payer la rançon immédiatement", "Éteindre la machine, déconnecter du réseau, contacter un expert et signaler à l\'ANSSI", "Reformater directement le disque", "Tenter de déchiffrer soi-même les fichiers"],correct:1,expl:"Ne jamais payer. Isoler la machine du réseau. Contacter un spécialiste et déclarer sur cybermalveillance.gouv.fr. Des outils de déchiffrement existent pour certains ransomwares."},
+  {theme:"Malwares",q:"Qu\'est-ce qu\'un ver informatique ?",opts:["Un malware qui a besoin d\'un fichier hôte", "Un malware qui se propage seul sur le réseau sans action de l\'utilisateur", "Un logiciel de surveillance parentale", "Un type de virus uniquement sur Mac"],correct:1,expl:"Un ver se propage de machine en machine de façon autonome en exploitant des failles réseau. Stuxnet (2010), ciblant les centrifugeuses iraniennes, est l\'exemple le plus célèbre."},
+  {theme:"Malwares",q:"Qu\'est-ce qu\'un spyware ?",opts:["Un logiciel qui affiche des publicités", "Un logiciel qui surveille tes activités et envoie les données à un tiers", "Un virus qui ralentit l\'ordinateur", "Un ransomware discret"],correct:1,expl:"Un spyware surveille ton activité (frappes clavier, captures d\'écran) et envoie ces données à un attaquant. Il peut voler mots de passe, numéros de carte, données personnelles silencieusement."},
+  {theme:"Malwares",q:"Comment un malware arrive-t-il le plus souvent sur un ordinateur ?",opts:["Via une faille WiFi automatique", "Par une pièce jointe ou un lien malveillant dans un email", "Via le bluetooth", "Par simple connexion à internet"],correct:1,expl:"La majorité des infections arrivent par email (pièce jointe .exe, .docm, lien malveillant) ou par téléchargement depuis des sources non officielles."},
+  {theme:"Malwares",q:"Qu\'est-ce qu\'un botnet ?",opts:["Un réseau de robots industriels connectés", "Un réseau d\'ordinateurs infectés contrôlés à distance par un attaquant", "Un service de sécurité automatisé", "Un logiciel antivirus en réseau"],correct:1,expl:"Un botnet est un réseau de machines infectées contrôlées à distance. Utilisé pour du spam, des DDoS, du minage de cryptomonnaies. La victime ne sait souvent pas que sa machine est dans un botnet."},
+  {theme:"Malwares",q:"Faut-il payer la rançon si on est victime d\'un ransomware ?",opts:["Oui, c\'est la seule solution", "Non, jamais — ça encourage les criminels et rien ne garantit la récupération", "Oui si les données sont importantes", "Seulement si la rançon est inférieure à 1000€"],correct:1,expl:"L\'ANSSI recommande de ne jamais payer. Payer finance les criminels et dans 30% des cas les données ne sont pas récupérées même après paiement."},
+  {theme:"Malwares",q:"Qu\'est-ce qu\'une backdoor ?",opts:["Une porte d\'entrée physique sécurisée", "Un accès caché permettant de contrôler un système à distance", "Un protocole de sauvegarde", "Un type de pare-feu"],correct:1,expl:"Une backdoor est un accès caché dans un système laissé par un attaquant. Elle permet de revenir sur le système compromis sans repasser par l\'attaque initiale."},
+  {theme:"WiFi & réseau",q:"Quel est le principal risque d\'un Wi-Fi public non chiffré ?",opts:["Le Wi-Fi est plus lent", "Un attaquant peut intercepter ton trafic (man-in-the-middle)", "La batterie se décharge plus vite", "Les sites web se chargent différemment"],correct:1,expl:"Sur un Wi-Fi public non chiffré, quelqu\'un sur le même réseau peut capturer ton trafic avec Wireshark. Sans HTTPS, il voit tout : identifiants, messages, données de formulaires."},
+  {theme:"WiFi & réseau",q:"Qu\'est-ce qu\'un Evil Twin ?",opts:["Un virus qui copie tes fichiers", "Un faux point d\'accès Wi-Fi imitant un réseau légitime", "Un logiciel espion sur téléphone", "Un type d\'attaque par email"],correct:1,expl:"Un Evil Twin est un faux point d\'accès qui imite un réseau légitime (même nom). Tu te connectes en croyant être sur le Wi-Fi du café, mais l\'attaquant intercepte tout ton trafic."},
+  {theme:"WiFi & réseau",q:"Qu\'est-ce qu\'un VPN ?",opts:["Un antivirus amélioré", "Un réseau privé virtuel qui chiffre ta connexion", "Un pare-feu personnel", "Un gestionnaire de mots de passe"],correct:1,expl:"Un VPN chiffre ton trafic et le fait transiter par un serveur distant. Sur un Wi-Fi public, même si quelqu\'un intercepte ton trafic, il ne voit que des données chiffrées."},
+  {theme:"WiFi & réseau",q:"Ton téléphone se connecte automatiquement à Free WiFi. C\'est dangereux car...",opts:["La connexion sera lente", "N\'importe qui peut créer un réseau avec ce nom pour piéger les appareils", "Les données mobiles se désactivent", "C\'est illégal"],correct:1,expl:"Les appareils se connectent aux réseaux connus par leur nom. Un attaquant peut créer un faux réseau avec le même nom. Désactive la connexion automatique."},
+  {theme:"WiFi & réseau",q:"Que signifie HTTPS dans une URL ?",opts:["Le site est officiel et certifié", "La connexion est chiffrée avec TLS/SSL", "Le site est rapide", "Le site est gratuit"],correct:1,expl:"HTTPS = HTTP + chiffrement TLS/SSL. Tes données en transit sont chiffrées. Mais HTTPS ne dit rien sur la légitimité du site lui-même."},
+  {theme:"WiFi & réseau",q:"Qu\'est-ce qu\'une attaque DDoS ?",opts:["Voler des données d\'une entreprise", "Saturer un serveur avec des milliers de requêtes pour le rendre inaccessible", "Installer un ransomware sur un serveur", "Intercepter des communications chiffrées"],correct:1,expl:"Un DDoS inonde un serveur de requêtes depuis des milliers de machines jusqu\'à le faire tomber. Des sites comme GitHub ou des banques ont été victimes de DDoS."},
+  {theme:"WiFi & réseau",q:"Qu\'est-ce qu\'un pare-feu ?",opts:["Un antivirus", "Un système qui filtre le trafic réseau selon des règles", "Un logiciel de chiffrement", "Un VPN intégré"],correct:1,expl:"Un pare-feu analyse le trafic réseau et bloque ce qui ne correspond pas aux règles définies. C\'est une première ligne de défense essentielle."},
+  {theme:"WiFi & réseau",q:"Quelle action protège le mieux sur un Wi-Fi public ?",opts:["Désactiver le bluetooth", "Utiliser uniquement des sites HTTPS et un VPN", "Éteindre la localisation", "Passer en mode avion et revenir"],correct:1,expl:"Sur Wi-Fi public : utiliser un VPN et s\'assurer que tous les sites sont en HTTPS. Éviter les services sensibles (banque, email pro) sur des réseaux publics."},
+  {theme:"WiFi & réseau",q:"Qu\'est-ce que le protocole WPA3 ?",opts:["Un type de pare-feu", "Le standard de chiffrement le plus récent pour les réseaux Wi-Fi", "Un protocole de messagerie sécurisée", "Un type de VPN"],correct:1,expl:"WPA3 est le standard de sécurité Wi-Fi actuel, remplaçant WPA2. Il offre un meilleur chiffrement et résiste aux attaques par dictionnaire sur les mots de passe Wi-Fi."},
+  {theme:"WiFi & réseau",q:"Qu\'est-ce qu\'une adresse IP ?",opts:["Un identifiant physique de ta carte réseau", "Une adresse numérique qui identifie ton appareil sur un réseau", "Le nom de ton réseau Wi-Fi", "Un protocole de chiffrement"],correct:1,expl:"Une adresse IP identifie ton appareil sur un réseau. Elle peut révéler ta localisation approximative. Les sites que tu visites voient ton IP publique — d\'où l\'intérêt du VPN pour la masquer."},
+  {theme:"Bonnes pratiques",q:"À quelle fréquence faut-il faire des mises à jour de sécurité ?",opts:["Une fois par an", "Le plus tôt possible après leur publication", "Seulement quand l\'ordinateur ralentit", "Jamais, elles peuvent créer des bugs"],correct:1,expl:"Les mises à jour corrigent des failles connues. Les attaquants exploitent rapidement les systèmes non patchés. Activer les mises à jour automatiques est une bonne pratique."},
+  {theme:"Bonnes pratiques",q:"Tu trouves une clé USB dans la rue. Que fais-tu ?",opts:["Tu la branches pour voir ce qu\'il y a dedans", "Tu la rapportes à la police ou la jettes", "Tu la branches sur un ordinateur non connecté", "Tu la donnes à un ami"],correct:1,expl:"Une clé USB abandonnée peut contenir un malware qui s\'installe automatiquement. Des études montrent que 45% des gens branchent les clés USB trouvées. Ne jamais le faire."},
+  {theme:"Bonnes pratiques",q:"Qu\'est-ce que la règle de sauvegarde 3-2-1 ?",opts:["3 sauvegardes, 2 par semaine, 1 par mois", "3 copies, sur 2 supports différents, dont 1 hors site", "3 disques durs, 2 NAS, 1 cloud", "Sauvegarder 3 fois, vérifier 2 fois, restaurer 1 fois"],correct:1,expl:"3 copies des données, sur 2 supports différents, dont 1 hors site. Si ransomware, incendie ou vol — tu as toujours tes données."},
+  {theme:"Bonnes pratiques",q:"Que faire avant de vendre un ancien téléphone ?",opts:["Simplement supprimer les apps", "Faire une réinitialisation d\'usine après sauvegarde", "Retirer la SIM uniquement", "Rien, le nouveau propriétaire ne pourra pas accéder aux données"],correct:1,expl:"Une simple suppression ne suffit pas — les données sont récupérables. Il faut une réinitialisation d\'usine complète (idéalement après avoir chiffré le téléphone)."},
+  {theme:"Bonnes pratiques",q:"Qu\'est-ce que le principe du moindre privilège ?",opts:["Donner le minimum de droits nécessaires à chaque utilisateur", "Utiliser le compte admin uniquement en urgence", "Limiter les mises à jour aux fonctions essentielles", "Désactiver les fonctionnalités inutiles"],correct:0,expl:"Moindre privilège = ne donner que les droits strictement nécessaires. Un comptable n\'a pas besoin d\'accès au serveur de production. Si son compte est compromis, les dégâts sont limités."},
+  {theme:"Bonnes pratiques",q:"Comment se protéger du phishing au quotidien ?",opts:["Installer un antivirus", "Vérifier l\'expéditeur et ne jamais cliquer sur des liens urgents", "Éviter les sites adultes", "Faire des sauvegardes"],correct:1,expl:"Vérifier l\'adresse email exacte (pas juste le nom affiché), aller directement sur le site officiel, ne jamais entrer ses identifiants depuis un lien d\'email."},
+  {theme:"Bonnes pratiques",q:"Que faire si tu remarques une activité bizarre sur ton compte en ligne ?",opts:["Attendre de voir si ça se reproduit", "Changer le mot de passe, activer le 2FA et vérifier les connexions récentes", "Supprimer le compte", "Contacter le service client uniquement"],correct:1,expl:"En cas d\'activité suspecte : changer le mot de passe en urgence, activer le 2FA, consulter l\'historique des connexions pour détecter les sessions inconnues."},
+  {theme:"Bonnes pratiques",q:"Que fait concrètement un antivirus ?",opts:["Chiffre tes fichiers pour les protéger", "Détecte et supprime les malwares connus en comparant aux signatures", "Bloque toutes les connexions réseau suspectes", "Sauvegarde tes données automatiquement"],correct:1,expl:"Un antivirus compare les fichiers à une base de signatures de malwares connus. Il ne protège pas contre les malwares zero-day — d\'où l\'importance des mises à jour de ses bases."},
+  {theme:"Bonnes pratiques",q:"Comment vérifier si tes données ont fuité ?",opts:["Tenter de te connecter avec tes anciens mots de passe", "Utiliser haveibeenpwned.com pour vérifier si ton email est dans des fuites connues", "Appeler ton opérateur", "Demander à la CNIL"],correct:1,expl:"HaveIBeenPwned recense les fuites de données connues. En entrant ton email, tu vois si tes credentials ont été exposés. Si oui : changer immédiatement le mot de passe."},
+  {theme:"Bonnes pratiques",q:"Pourquoi faut-il verrouiller son ordinateur quand on s\'éloigne ?",opts:["Pour économiser la batterie", "Pour empêcher toute personne physiquement présente d\'accéder à la session", "Pour protéger contre les virus", "Pour éviter les mises à jour intempestives"],correct:1,expl:"Un écran non verrouillé = accès total en quelques secondes. Raccourci : Windows+L sur Windows, Cmd+Ctrl+Q sur Mac. Prendre l\'habitude de le faire systématiquement."},
+  {theme:"IA & Deepfakes",q:"Qu\'est-ce qu\'un deepfake ?",opts:["Un faux profil sur les réseaux sociaux", "Une vidéo ou audio falsifié par l\'IA pour faire dire quelque chose à quelqu\'un", "Un malware utilisant l\'IA", "Un faux site web très convaincant"],correct:1,expl:"Un deepfake utilise l\'IA pour synthétiser des vidéos ou audios hyper-réalistes de personnes disant ou faisant des choses qu\'elles n\'ont jamais faites. La technologie s\'améliore très rapidement."},
+  {theme:"IA & Deepfakes",q:"Comment détecter un deepfake vidéo ?",opts:["C\'est impossible", "Clignements anormaux, artefacts sur les bords du visage, incohérences d\'éclairage", "La qualité vidéo est toujours mauvaise", "La voix est toujours robotique"],correct:1,expl:"Indices : clignements peu naturels, bords du visage flous, incohérences de lumière, dents ou oreilles mal rendues. Mais les deepfakes progressent — vérifier toujours la source originale."},
+  {theme:"IA & Deepfakes",q:"Un deepfake audio de ton patron te demande un virement urgent. C\'est quoi ?",opts:["Phishing classique", "Fraude au deepfake vocal (vishing IA)", "Ransomware", "Ingénierie sociale classique"],correct:1,expl:"Les arnaques par deepfake vocal se multiplient. En 2019, un PDG a transféré 220 000€ après avoir reçu un appel d\'une voix IA imitant son supérieur. Toujours vérifier par un autre canal."},
+  {theme:"IA & Deepfakes",q:"L\'IA peut-elle être utilisée par les attaquants ?",opts:["Non, l\'IA est uniquement défensive", "Oui : personnaliser les phishings, générer des deepfakes, automatiser les attaques", "Seulement pour créer des virus", "L\'IA est trop complexe pour les cybercriminels"],correct:1,expl:"L\'IA est un outil double. Les attaquants l\'utilisent pour personnaliser les phishings, créer des deepfakes, générer du code malveillant. Les défenseurs l\'utilisent aussi pour détecter ces attaques."},
+  {theme:"IA & Deepfakes",q:"Qu\'est-ce que le prompt injection dans les outils d\'IA ?",opts:["Un type de ransomware ciblant les IA", "Manipuler une IA via ses entrées pour lui faire ignorer ses instructions", "Un virus qui infecte les modèles d\'IA", "Une technique de chiffrement"],correct:1,expl:"Le prompt injection injecte des instructions malveillantes dans les entrées d\'un système IA pour détourner son comportement. Par exemple : exfiltrer des données via un document analysé."},
+  {theme:"IA & Deepfakes",q:"Comment l\'IA générative peut-elle améliorer le phishing ?",opts:["Elle ne peut pas", "Générer des millions d\'emails personnalisés sans fautes en quelques secondes", "Uniquement pour créer de faux logos", "Pour envoyer des emails plus rapidement"],correct:1,expl:"L\'IA générative crée des emails de phishing personnalisés, grammaticalement parfaits, adaptés à la cible. La barrière des fautes d\'orthographe qui permettait de détecter le phishing disparaît."},
+  {theme:"IA & Deepfakes",q:"Que sont les hallucinations d\'une IA ?",opts:["Des bugs visuels dans les deepfakes", "Des informations fausses présentées avec confiance par une IA", "Des virus créés par l\'IA", "Des erreurs de traduction"],correct:1,expl:"Les hallucinations sont des affirmations fausses générées avec assurance par une IA. Une IA peut inventer des sources, citations, faits. Toujours vérifier les informations importantes."},
+  {theme:"IA & Deepfakes",q:"Quelle loi européenne encadre l\'utilisation de l\'IA ?",opts:["Le RGPD uniquement", "L\'AI Act (Règlement IA européen, 2024)", "La directive NIS 2", "Aucune loi n\'existe encore"],correct:1,expl:"L\'AI Act (2024) est le premier cadre légal mondial sur l\'IA. Il classe les systèmes IA par niveau de risque et interdit certaines utilisations comme la reconnaissance faciale en temps réel."},
+  {theme:"IA & Deepfakes",q:"Comment vérifier si une image est générée par IA ?",opts:["C\'est impossible", "Vérifier les mains (souvent mal rendues), les arrière-plans, utiliser des outils de détection", "Regarder la résolution", "Vérifier les métadonnées EXIF uniquement"],correct:1,expl:"Indices : mains avec trop de doigts, texte illisible, oreilles asymétriques, arrière-plans étranges. Des outils comme AI or Not analysent les probabilités. Mais la détection reste imparfaite."},
+  {theme:"IA & Deepfakes",q:"Un deepfake compromettant circule sur toi. Quelle est la première chose à faire ?",opts:["Ignorer, ça va passer", "Signaler sur la plateforme, contacter la police, conserver des preuves", "Le partager pour montrer que c\'est faux", "Contacter directement l\'auteur"],correct:1,expl:"Signaler immédiatement à la plateforme. Conserver des captures comme preuves. Porter plainte (c\'est un délit). Contacter cybermalveillance.gouv.fr pour un accompagnement."},
+  {theme:"Métiers cyber",q:"Différence entre hacker white hat et black hat ?",opts:["La couleur de leur équipement", "White hat = éthique et légal, black hat = malveillant et illégal", "White hat = débutant, black hat = expert", "White hat = défensif, black hat = offensif"],correct:1,expl:"White hat = hacker éthique avec autorisation pour améliorer la sécurité. Black hat = cybercriminel agissant illégalement. Grey hat = entre les deux, parfois sans autorisation mais sans intention malveillante."},
+  {theme:"Métiers cyber",q:"Qu\'est-ce qu\'un test d\'intrusion (pentest) ?",opts:["Un test de vitesse réseau", "Une simulation d\'attaque autorisée pour identifier les vulnérabilités", "Un audit de conformité RGPD", "Un test de résistance des serveurs"],correct:1,expl:"Un pentest est une attaque simulée et autorisée menée par des experts pour trouver les failles avant les vrais attaquants. Boîte noire, boîte blanche ou boîte grise selon le niveau d\'information."},
+  {theme:"Métiers cyber",q:"Que fait un analyste SOC ?",opts:["Développe des logiciels de sécurité", "Surveille en temps réel les systèmes pour détecter et répondre aux incidents", "Vend des solutions de cybersécurité", "Gère les mises à jour des antivirus"],correct:1,expl:"Un analyste SOC surveille les alertes 24h/24, analyse les événements suspects, répond aux incidents. C\'est la tour de contrôle de la cybersécurité d\'une organisation."},
+  {theme:"Métiers cyber",q:"Qu\'est-ce que la Red Team ?",opts:["L\'équipe de développeurs", "L\'équipe qui simule des attaques réelles pour tester les défenses", "L\'équipe de réponse aux incidents", "L\'équipe commerciale"],correct:1,expl:"La Red Team joue le rôle des attaquants en simulant des attaques réalistes. La Blue Team est défensive. La Purple Team combine les deux pour un apprentissage mutuel."},
+  {theme:"Métiers cyber",q:"Quel outil emblématique utilisent les pentesters pour scanner les réseaux ?",opts:["Google Chrome", "Nmap (Network Mapper)", "Microsoft Word", "Adobe Acrobat"],correct:1,expl:"Nmap découvre les hôtes actifs, ports ouverts, services et OS. Légal uniquement sur les réseaux pour lesquels on a une autorisation écrite."},
+  {theme:"Métiers cyber",q:"Qu\'est-ce que la forensique numérique ?",opts:["La création de faux indices numériques", "L\'analyse de preuves numériques pour des investigations judiciaires", "La suppression sécurisée de données", "Le chiffrement de preuves"],correct:1,expl:"La forensique collecte et analyse des preuves numériques (logs, fichiers effacés, métadonnées) pour comprendre ce qui s\'est passé lors d\'un incident et identifier les responsables."},
+  {theme:"Métiers cyber",q:"Que signifie CTF en cybersécurité ?",opts:["Capture The Flag — compétition de hacking éthique", "Computer Threat Framework", "Cyber Training Foundation", "Critical Technology Firewall"],correct:0,expl:"CTF = Capture The Flag. Compétitions de hacking éthique où les participants résolvent des challenges (crypto, forensique, web, reverse...) pour trouver un flag. Excellent terrain d\'apprentissage légal."},
+  {theme:"Métiers cyber",q:"Quel est le rôle d\'un RSSI ?",opts:["Réparer les ordinateurs", "Définir et piloter la stratégie de cybersécurité de l\'organisation", "Répondre aux appels du support", "Rédiger les contrats informatiques"],correct:1,expl:"Le RSSI (CISO en anglais) définit la politique de sécurité, manage les risques, pilote les équipes cyber et représente la sécurité au niveau de la direction."},
+  {theme:"Métiers cyber",q:"Quelle certification est référence en cybersécurité offensive ?",opts:["BAFA", "OSCP (Offensive Security Certified Professional)", "TOEFL", "DELF"],correct:1,expl:"L\'OSCP d\'Offensive Security est une certification pentest reconnue mondialement. Elle valide des compétences pratiques via un examen de 24h où le candidat doit pirater plusieurs machines."},
+  {theme:"Métiers cyber",q:"Pourquoi la cybersécurité recrute-t-elle massivement ?",opts:["Par mode passagère", "Pénurie de 3,5 millions de professionnels cyber dans le monde", "Les salaires sont bas", "Uniquement dans les grandes entreprises"],correct:1,expl:"La pénurie mondiale est estimée à 3,5 millions de postes non pourvus. En France, des milliers de postes sont ouverts. Les profils cyber sont parmi les plus recherchés et mieux rémunérés du secteur tech."},
+  {theme:"Culture cyber",q:"Qui est souvent surnommé le hacker le plus célèbre de l\'histoire ?",opts:["Bill Gates", "Kevin Mitnick", "John von Neumann", "Ada Lovelace"],correct:1,expl:"Kevin Mitnick a piraté des dizaines d\'entreprises (IBM, Motorola, Nokia) avant d\'être arrêté par le FBI en 1995. Il est devenu consultant en cybersécurité après sa libération."},
+  {theme:"Culture cyber",q:"Qu\'est-ce que WannaCry ?",opts:["Un logiciel espion", "Le ransomware mondial de 2017 qui a touché 300 000 machines dans 150 pays", "Un cheval de Troie bancaire", "Un virus effaçant les disques durs"],correct:1,expl:"WannaCry (mai 2017) exploitait une faille Windows volée à la NSA. Il a paralysé des hôpitaux britanniques, Renault, FedEx pour 4 milliards de dégâts estimés."},
+  {theme:"Culture cyber",q:"Quel pays est cité pour l\'attaque Stuxnet ?",opts:["Russie et Chine", "États-Unis et Israël", "Corée du Nord", "Iran"],correct:1,expl:"Stuxnet (2010) est attribué aux États-Unis et Israël. Ce ver a physiquement détruit des centrifugeuses nucléaires iraniennes. Premier cyberarmement connu ayant causé des dégâts physiques réels."},
+  {theme:"Culture cyber",q:"Que signifie le terme zero-day ?",opts:["Une attaque lancée à minuit", "Une faille inconnue du fabricant pour laquelle aucun patch n\'existe", "Un virus créé en une journée", "Une attaque impossible à contrer"],correct:1,expl:"Un zero-day est une vulnérabilité inconnue du fabricant, sans correctif disponible. Les attaquants qui la découvrent ont zéro jour de retard sur la défense. Ces failles valent des millions."},
+  {theme:"Culture cyber",q:"Quel est le coût moyen d\'une cyberattaque pour une entreprise ?",opts:["Environ 10 000€", "Environ 100 000€", "Environ 4,5 millions de dollars", "Moins de 1 000€"],correct:2,expl:"Selon IBM (2023), le coût moyen d\'une violation de données est de 4,45 millions de dollars, incluant remédiation, pertes d\'exploitation, amendes et atteintes à la réputation."},
+  {theme:"Culture cyber",q:"Qu\'est-ce que le dark web ?",opts:["Internet la nuit", "Une partie d\'internet accessible via Tor, non indexée par les moteurs classiques", "Un réseau uniquement criminel", "Les données supprimées d\'internet"],correct:1,expl:"Le dark web est accessible via Tor qui anonymise les connexions. Non indexé par Google. Utilisé pour la liberté d\'expression et la vie privée, mais aussi pour des marchés illicites."},
+  {theme:"Culture cyber",q:"Quels pays ont les cyberattaques gouvernementales les plus sophistiquées ?",opts:["France", "États-Unis", "Corée du Nord, Russie, Chine et États-Unis sont tous cités", "Allemagne"],correct:2,expl:"Les groupes APT les plus actifs : Lazarus Group (Corée du Nord), APT28 (Russie), APT41 (Chine), Equation Group (États-Unis). La cyberguerre est une réalité géopolitique."},
+  {theme:"Culture cyber",q:"Combien de cyberattaques se produisent dans le monde chaque jour ?",opts:["Environ 100", "Environ 1 000", "Des millions", "Environ 10 000"],correct:2,expl:"Des millions de tentatives d\'attaques se produisent chaque jour. Des bots automatisés scannent constamment internet. Une machine non protégée peut être attaquée en quelques minutes."},
+  {theme:"Culture cyber",q:"Qu\'est-ce qu\'un certificat SSL/TLS ?",opts:["Un diplôme de cybersécurité", "Un fichier cryptographique qui authentifie l\'identité d\'un site et chiffre les communications", "Un type de pare-feu", "Un antivirus en ligne"],correct:1,expl:"Un certificat SSL/TLS (le cadenas dans le navigateur) prouve l\'identité d\'un site et chiffre les échanges. Sans lui : HTTP non chiffré. Avec lui : HTTPS, connexion sécurisée."},
+  {theme:"Culture cyber",q:"Quel est l\'incident de cybersécurité le plus coûteux de l\'histoire ?",opts:["WannaCry 2017", "NotPetya 2017 — estimé à plus de 10 milliards de dollars", "Sony Pictures 2014", "Target 2013"],correct:1,expl:"NotPetya (2017), attribué à la Russie : 10+ milliards de dégâts. Maersk, Merck, FedEx ont chacun perdu des centaines de millions. Déguisé en ransomware, son vrai but était la destruction."}
+,
+  {theme:"Mots de passe",q:"Qu\'est-ce qu\'un sel (salt) en cryptographie ?",opts:["Une épice pour chiffrer","Donnée aléatoire ajoutée avant de hasher un mot de passe","Un algorithme de chiffrement","Un type de VPN"],correct:1,expl:"Le sel est une valeur aléatoire ajoutée au mot de passe avant le hachage. Il empêche les attaques par tables arc-en-ciel en rendant chaque hash unique même pour des mots de passe identiques."},
+  {theme:"Mots de passe",q:"Qu\'est-ce qu\'une rainbow table ?",opts:["Un tableau de couleurs","Base de données pré-calculée de hashes pour craquer des mots de passe","Un outil de visualisation réseau","Un type de pare-feu"],correct:1,expl:"Une rainbow table contient des mots de passe et leurs hashes précalculés. L\'attaquant compare le hash volé à sa table. Le sel (salt) rend cette attaque inefficace."},
+  {theme:"Mots de passe",q:"Qu\'est-ce que le credential stuffing ?",opts:["Remplir un formulaire automatiquement","Tester massivement des identifiants volés sur de nombreux sites","Un type de phishing","Une attaque DDoS"],correct:1,expl:"Le credential stuffing utilise des listes d\'identifiants volés lors de fuites pour tenter de se connecter sur d\'autres services. Très efficace si vous réutilisez vos mots de passe."},
+  {theme:"Mots de passe",q:"Qu\'est-ce que le SIM swapping ?",opts:["Changer de téléphone","Convaincre l\'opérateur de transférer un numéro vers une SIM pirate","Un malware mobile","Cloner une carte SIM"],correct:1,expl:"Le SIM swapping convainc l\'opérateur de transférer ton numéro vers une nouvelle SIM contrôlée par l\'attaquant. Il reçoit alors tes SMS de 2FA."},
+  {theme:"Mots de passe",q:"Qu\'est-ce qu\'une clé de sécurité physique (YubiKey) ?",opts:["Un antivirus sur clé USB","Périphérique USB/NFC qui génère un code d\'authentification unique","Un gestionnaire de mots de passe portable","Un disque dur chiffré"],correct:1,expl:"Une clé physique comme YubiKey génère un code unique à chaque connexion. C\'est la forme la plus sécurisée de 2FA car elle résiste même aux phishings sophistiqués."},
+  {theme:"Mots de passe",q:"Quelle est la différence entre chiffrement et hachage ?",opts:["Aucune différence","Le chiffrement est réversible, le hachage est irréversible","Le hachage est plus lent","Le chiffrement ne s\'applique qu\'aux fichiers"],correct:1,expl:"Le chiffrement permet de retrouver les données originales avec une clé. Le hachage est à sens unique. On hash les mots de passe, on chiffre les messages."},
+  {theme:"Phishing",q:"Qu\'est-ce que le whaling ?",opts:["Phishing ciblant les baleines","Phishing ciblant les dirigeants d\'entreprise (PDG, DAF...)","Phishing par vidéo","Phishing sur les réseaux"],correct:1,expl:"Le whaling cible les dirigeants : PDG, DAF... Les attaquants prennent le temps de connaître leur cible pour des messages très crédibles, souvent avec des demandes de virement."},
+  {theme:"Phishing",q:"Qu\'est-ce que le quishing ?",opts:["Phishing par questionnaire","Phishing via QR code","Phishing silencieux","Phishing quantique"],correct:1,expl:"Le quishing utilise de faux QR codes pour rediriger vers des sites malveillants. Particulièrement dangereux car l\'URL n\'est pas visible avant de scanner."},
+  {theme:"Phishing",q:"Qu\'est-ce que le typosquatting ?",opts:["Squatter des maisons","Enregistrer des domaines avec des fautes de frappe proches de marques connues","Voler des comptes Twitter","Un type de malware"],correct:1,expl:"Le typosquatting enregistre des domaines avec des fautes de frappe (gooogle.com, amazzon.fr) pour piéger les utilisateurs qui tapent mal l\'URL."},
+  {theme:"Phishing",q:"Comment reconnaître un email de phishing malgré une adresse apparemment légitime ?",opts:["Impossible si l\'adresse est correcte","Vérifier le vrai domaine d\'envoi dans les en-têtes SMTP","Appeler l\'expéditeur","Regarder uniquement la signature"],correct:1,expl:"L\'adresse affichée peut être falsifiée (spoofing). Les en-têtes SMTP révèlent le vrai serveur d\'envoi. Afficher la source du message montre le vrai expéditeur."},
+  {theme:"Réseaux sociaux",q:"Qu\'est-ce que le stalkerware ?",opts:["Un réseau social pour stalkers","Logiciel espion installé à l\'insu de la victime pour surveiller ses activités","Un virus sur Instagram","Un type de deepfake"],correct:1,expl:"Le stalkerware est installé discrètement sur le téléphone d\'une personne pour surveiller messages, localisation, appels... C\'est illégal et souvent lié à des violences conjugales."},
+  {theme:"Réseaux sociaux",q:"Pourquoi désactiver la géolocalisation dans les photos avant de les publier ?",opts:["Pour économiser la batterie","Les métadonnées EXIF contiennent les coordonnées GPS précises du lieu de prise","Pour réduire la taille du fichier","Pour améliorer la qualité"],correct:1,expl:"Les photos contiennent des métadonnées EXIF incluant les coordonnées GPS. Publier une photo depuis chez toi peut révéler ton adresse exacte à quiconque examine les métadonnées."},
+  {theme:"Réseaux sociaux",q:"Qu\'est-ce que le catfishing ?",opts:["Pêcher des poissons-chats","Créer une fausse identité en ligne pour tromper quelqu\'un","Un type de phishing email","Voler des photos de profil"],correct:1,expl:"Le catfishing crée une fausse identité sur les réseaux pour établir une relation trompeuse. Utilisé pour manipulation affective, arnaque ou prédation."},
+  {theme:"Cadre légal",q:"Qu\'est-ce que la CNIL ?",opts:["Commission Nationale Informatique et Libertés — autorité française de protection des données","Comité National d\'Inspection des Logiciels Illégaux","Centre National des Infrastructures Légales","Commission Numérique et Internet Local"],correct:0,expl:"La CNIL est l\'autorité administrative indépendante française chargée de protéger les données personnelles. Elle contrôle les entreprises et peut infliger des sanctions."},
+  {theme:"Cadre légal",q:"Qu\'est-ce que le droit à l\'oubli numérique ?",opts:["Effacer sa mémoire","Demander aux moteurs de recherche de déréférencer certains liens te concernant","Supprimer tous ses comptes","Un droit uniquement pour les mineurs"],correct:1,expl:"Le droit au déréférencement permet de demander à Google de ne plus afficher certains liens dans les résultats te concernant. Reconnu par la CJUE en 2014, encadré par le RGPD."},
+  {theme:"Cadre légal",q:"Qu\'est-ce qu\'un DPO (Data Protection Officer) ?",opts:["Directeur des Programmes Officiels","Délégué à la Protection des Données — responsable RGPD en entreprise","Digital Privacy Officer","Directeur des Politiques Opérationnelles"],correct:1,expl:"Le DPO est le responsable RGPD au sein d\'une organisation. Il conseille sur la conformité et est le point de contact avec la CNIL. Obligatoire pour certaines organisations."},
+  {theme:"Malwares",q:"Qu\'est-ce qu\'un rootkit ?",opts:["Un kit de démarrage Linux","Malware qui se dissimule au niveau du système d\'exploitation pour éviter la détection","Un logiciel de gestion des droits","Un type d\'antivirus"],correct:1,expl:"Un rootkit s\'installe profondément dans le système pour se cacher et cacher d\'autres malwares. Extrêmement difficile à détecter et supprimer."},
+  {theme:"Malwares",q:"Qu\'est-ce qu\'un keylogger ?",opts:["Un logiciel de clavier alternatif","Malware qui enregistre toutes les frappes clavier pour voler mots de passe","Un type de pare-feu","Un outil de développement"],correct:1,expl:"Un keylogger enregistre chaque touche pressée. Invisible pour l\'utilisateur, il capture mots de passe, numéros de carte, messages... et les envoie à l\'attaquant."},
+  {theme:"Malwares",q:"Qu\'est-ce qu\'un malware fileless ?",opts:["Malware sans fichier — s\'exécute uniquement en mémoire RAM","Un malware qui efface les fichiers","Un virus sans signature","Un malware sur clé USB"],correct:0,expl:"Un malware fileless n\'écrit rien sur le disque dur : il s\'exécute directement en mémoire via des outils légitimes du système. Très difficile à détecter par les antivirus classiques."},
+  {theme:"Malwares",q:"Qu\'est-ce qu\'un cryptomineur malveillant ?",opts:["Un virus qui chiffre les fichiers","Malware qui utilise ta machine pour miner des cryptomonnaies à ton insu","Un ransomware blockchain","Un voleur de portefeuilles crypto"],correct:1,expl:"Le cryptojacking installe un mineur sur ta machine. Tu ne perds pas de données mais ton ordinateur ralentit, ta facture électrique augmente et ton matériel s\'use prématurément."},
+  {theme:"WiFi & réseau",q:"Qu\'est-ce que le DNS poisoning ?",opts:["Infecter un serveur DNS avec un virus","Corrompre le cache DNS pour rediriger les utilisateurs vers de faux sites","Attaquer les serveurs de noms de domaine","Voler des domaines internet"],correct:1,expl:"Le DNS poisoning modifie les tables de résolution DNS pour rediriger le trafic vers de faux sites. Quand tu tapes une URL correcte, tu arrives quand même sur un faux site."},
+  {theme:"WiFi & réseau",q:"Qu\'est-ce qu\'un honeypot en cybersécurité ?",opts:["Un piège à abeilles connecté","Système leurre conçu pour attirer et analyser les attaquants","Un type de pare-feu","Un logiciel de surveillance réseau"],correct:1,expl:"Un honeypot est un système volontairement vulnérable pour attirer les attaquants. Il permet d\'étudier leurs techniques, collecter des preuves et alerter sur une intrusion."},
+  {theme:"WiFi & réseau",q:"Qu\'est-ce qu\'un scan de ports ?",opts:["Scanner des QR codes sur un réseau","Sonder un système pour découvrir quels ports réseau sont ouverts","Scanner des documents en réseau","Chercher des réseaux Wi-Fi"],correct:1,expl:"Un scan de ports (Nmap par exemple) identifie les ports ouverts sur un système et les services associés. Utilisé légalement lors d\'un audit ou pentest pour cartographier la surface d\'attaque."},
+  {theme:"Bonnes pratiques",q:"Qu\'est-ce que la politique du moindre privilège ?",opts:["Payer le moins pour la sécurité","Donner à chaque utilisateur uniquement les droits nécessaires à son travail","Utiliser des logiciels gratuits","Réduire les mises à jour"],correct:1,expl:"Le moindre privilège limite les dégâts si un compte est compromis. Un stagiaire n\'a pas besoin des droits admin. Chaque permission inutile est un risque."},
+  {theme:"Bonnes pratiques",q:"Pourquoi chiffrer son disque dur ?",opts:["Pour économiser de l\'espace","Si le matériel est volé, les données restent illisibles sans la clé","Pour accélérer l\'ordinateur","Pour éviter les virus"],correct:1,expl:"Le chiffrement complet du disque (BitLocker, FileVault) protège les données en cas de vol physique. Sans la clé, le voleur ne peut pas lire les données."},
+  {theme:"Bonnes pratiques",q:"Qu\'est-ce qu\'un plan de réponse aux incidents ?",opts:["Un plan de communication de crise","Document définissant les procédures à suivre en cas de cyberattaque","Un plan d\'assurance","Un manuel antivirus"],correct:1,expl:"Un plan de réponse définit QUI fait QUOI et QUAND en cas d\'attaque : isolation, notification, investigation, remédiation. Les organisations sans ce plan perdent en moyenne 3x plus de temps."},
+  {theme:"IA & Deepfakes",q:"Comment l\'IA générative change-t-elle les arnaques en ligne ?",opts:["Elle les rend moins nombreuses","Permet de créer faux profils, emails et appels ultra-personnalisés à grande échelle","Elle ne change rien","Elle aide uniquement à détecter les arnaques"],correct:1,expl:"L\'IA générative industrialise les arnaques : faux profils crédibles, emails parfaits, voix clonées... Ce qui prenait des heures à un humain prend des secondes à une IA."},
+  {theme:"IA & Deepfakes",q:"Qu\'est-ce que le clonage vocal par IA ?",opts:["Copier physiquement un haut-parleur","Recréer la voix d\'une personne à partir de quelques secondes d\'enregistrement","Synchroniser des voix en studio","Traduire automatiquement la parole"],correct:1,expl:"Des outils comme ElevenLabs clonent une voix avec seulement 3-10 secondes d\'audio. En 2023, une fraude à 25M$ a utilisé un deepfake vidéo en visioconférence."},
+  {theme:"IA & Deepfakes",q:"Qu\'est-ce que le jailbreaking d\'une IA ?",opts:["Pirater physiquement un serveur IA","Manipuler une IA pour qu\'elle contourne ses restrictions de sécurité","Accélérer les calculs d\'une IA","Copier un modèle d\'IA"],correct:1,expl:"Le jailbreaking exploite des failles dans les instructions de sécurité d\'une IA pour lui faire produire du contenu normalement interdit."},
+  {theme:"Métiers cyber",q:"Qu\'est-ce qu\'un bug bounty hunter ?",opts:["Chasseur de bugs dans des jeux vidéo","Chercheur rémunéré pour trouver et signaler des vulnérabilités légalement","Un développeur qui corrige des bugs","Un testeur logiciel"],correct:1,expl:"Les bug bounty hunters cherchent des failles dans des systèmes dont les propriétaires ont ouvert un programme de récompenses. Plateformes : HackerOne, Bugcrowd, YesWeHack."},
+  {theme:"Métiers cyber",q:"Qu\'est-ce que la threat intelligence ?",opts:["L\'IA des menaces","Collecte et analyse de données sur les menaces pour anticiper les attaques","Un type de pare-feu intelligent","La surveillance des employés"],correct:1,expl:"La threat intelligence analyse les tactiques des attaquants, les IOC (indicateurs de compromission), les groupes APT... pour anticiper les attaques avant qu\'elles arrivent."},
+  {theme:"Métiers cyber",q:"Qu\'est-ce que la cyber résilience ?",opts:["La résistance physique des serveurs","Capacité à maintenir les opérations et se remettre rapidement d\'une cyberattaque","Un type d\'assurance cyber","La résistance d\'un code à être craqué"],correct:1,expl:"La cyber résilience va au-delà de la sécurité préventive : accepter qu\'une attaque puisse réussir et se préparer à continuer à fonctionner malgré elle."},
+  {theme:"Culture cyber",q:"Qu\'est-ce que le groupe Lazarus ?",opts:["Un groupe de hackers espagnols","Groupe APT nord-coréen responsable de milliards de dollars de vols","Un CERT international","Un groupe de chercheurs en sécurité"],correct:1,expl:"Lazarus Group est attribué à la Corée du Nord. Responsable du hack Sony Pictures (2014), WannaCry (2017), de vols de cryptomonnaies. Finance le programme nucléaire nord-coréen."},
+  {theme:"Culture cyber",q:"Combien coûte NotPetya aux entreprises mondiales ?",opts:["Environ 100 millions","Environ 1 milliard","Plus de 10 milliards de dollars","Environ 500 millions"],correct:2,expl:"NotPetya (2017), attribué à la Russie : 10+ milliards de dégâts. Maersk 300M$, Merck 870M$, FedEx 400M$. Déguisé en ransomware mais conçu pour détruire."},
+  {theme:"Culture cyber",q:"Qu\'est-ce que la convention de Budapest ?",opts:["Une conférence annuelle de hackers","Le premier traité international sur la cybercriminalité (2001)","Un accord de libre-échange numérique","Un standard de chiffrement européen"],correct:1,expl:"La Convention de Budapest (2001) est le premier traité international sur la cybercriminalité. Ratifié par 60+ pays, il harmonise les lois nationales et facilite la coopération internationale."},
+  {theme:"Cyberharcèlement",q:"Qu\'est-ce que la sextorsion ?",opts:["Type de spam","Chantage avec des images intimes réelles ou fabriquées","Virus sur site adulte","Phishing ciblant les adultes"],correct:1,expl:"Chantage aggravé. La victime n\'est JAMAIS responsable. Ne jamais payer — cela empire la situation. Appeler le 3018 immédiatement."},
+  {theme:"Cyberharcèlement",q:"Qu\'est-ce que l\'usurpation d\'identité numérique ?",opts:["Oublier son mot de passe","Créer un faux profil au nom d\'une personne pour nuire à sa réputation","Pirater un compte","Voler des données personnelles"],correct:1,expl:"L\'usurpation d\'identité numérique est un délit depuis 2011 (loi LOPPSI 2). Créer un faux profil au nom de quelqu\'un : 1 an de prison et 15 000€."},
+  {theme:"Cyberharcèlement",q:"Que signifie le site signalement.gouv.fr ?",opts:["Signaler des problèmes administratifs","Signaler des contenus illégaux en ligne à la police","Déposer une plainte en ligne","Contacter la CNIL"],correct:1,expl:"Signalement.gouv.fr (plateforme PHAROS) permet de signaler tout contenu illégal en ligne : harcèlement, menaces, pédopornographie, contenus haineux. Géré par la police nationale."}
+];
+
+const PHISHING_CASES = [
+  {id:'p1',type:'email',title:'Mail PayPal suspect',from:'support@paypa1-secure.com',subject:'Votre compte suspendu — Action requise',body:'Cher client PayPal,\n\nNous avons détecté une activité inhabituelle. Votre accès est suspendu.\n\nVérifiez votre identité dans les 24 heures via :\nhttp://paypa1-secure.com/verify\n\nL\'équipe PayPal',clues:["Domaine 'paypa1' (1 au lieu de l)","Pas de HTTPS","Urgence artificielle 24h","Formule générique"],isPhish:true,expl:"Phishing. Domaine falsifié (paypa1 avec un 1), urgence artificielle, lien suspect. PayPal ne contacte jamais ainsi."},
+  {id:'p2',type:'email',title:'Mail Amazon légitime',from:'noreply@amazon.fr',subject:'Commande #405-8832941 expédiée',body:'Bonjour,\n\nBonne nouvelle ! Votre commande #405-8832941 a été expédiée.\nLivraison estimée : demain avant 23h.\n\nSuivre ma commande\n\nL\'équipe Amazon',clues:["Domaine amazon.fr légitime","Numéro de commande précis","Pas d'urgence ni de demande","Pas de lien suspect"],isPhish:false,expl:"Mail légitime. Domaine correct, numéro de commande précis, pas de demande urgente ni de lien suspect."},
+  {id:'p3',type:'email',title:'Faux remboursement impôts',from:'direction@impots-gouv-fr.net',subject:'Remboursement fiscal en attente — 247,60€',body:'Madame, Monsieur,\n\nSuite à votre dernière déclaration, un trop-perçu de 247,60€ a été calculé.\n\nRenseignez vos coordonnées bancaires via :\nhttp://impots-gouv-fr.net/remboursement\n\nCe remboursement expire dans 72 heures.',clues:["Faux domaine impots-gouv-fr.net","Demande coordonnées bancaires","Urgence 72h","Vrai site : impots.gouv.fr"],isPhish:true,expl:"Phishing fréquent. Le vrai site est impots.gouv.fr (.gouv.fr réservé à l'État). Les impôts ne demandent JAMAIS vos coordonnées bancaires par mail."},
+  {id:'vf1',type:'site',title:'Faux site Amazon promo',url:'http://amaz0n-promo.fr/iphone-gratuit',lock:false,content:'FÉLICITATIONS ! Vous êtes le 1 000 000ème visiteur !\niPhone 15 Pro GRATUIT — remplissez le formulaire\n\nNom, Prénom, Adresse, N° de carte bancaire (frais de livraison : 1,99€)...',isReal:false,expl:"Arnaque. URL suspecte (amaz0n avec un zéro), pas de HTTPS, promesse irréaliste, demande de carte bancaire pour 1,99€."},
+  {id:'vf2',type:'site',title:'Site service-public.fr',url:'https://www.service-public.fr/particuliers',lock:true,content:'Portail officiel de l\'administration française\n\n→ Carte d\'identité\n→ Permis de conduire\n→ Déclaration d\'impôts\n→ Allocations',isReal:true,expl:"Site officiel légitime. Domaine .gouv.fr réservé à l'État, HTTPS valide, contenu cohérent avec un service public."},
+  {id:'vf3',type:'site',title:'Faux Netflix (piège HTTPS)',url:'https://netf1ix-abonnement.com/renouvellement',lock:true,content:'NETFLIX\n\nVotre abonnement a expiré.\nMettez à jour vos informations de paiement pour continuer.\n\nNuméro de carte, date expiration, CVV...',isReal:false,expl:"Piège ! HTTPS présent mais domaine frauduleux (netf1ix avec un 1). HTTPS chiffre la connexion mais ne garantit PAS la légitimité du site."},
+,
+  {id:'p4',type:'sms',title:'SMS Chronopost suspect',from:'CHRONOPOST',subject:'',body:'CHRONOPOST: Votre colis #FR847291 est en attente. Frais de douane: 2,50€ à régler avant livraison: http://chronopost-livraison.net/payer',isPhish:true,clues:["Domaine non officiel","Demande de paiement par SMS","Le vrai Chronopost est chronopost.fr","Lien suspect"],expl:"Arnaque aux faux SMS de livraison. Le vrai Chronopost est chronopost.fr. Ces SMS récoltent les données bancaires via une fausse page de paiement."},
+  {id:'p5',type:'email',title:'Faux email Microsoft',from:'security-alert@microsoft-account.net',subject:'Action requise : Activité suspecte détectée',body:'Votre compte Microsoft a été connecté depuis Moscou.\n\nSi ce n\'était pas vous :\nhttps://microsoft-account.net/secure\n\nSans réponse dans 24h, votre compte sera suspendu.',isPhish:true,clues:["Domaine microsoft-account.net (pas microsoft.com)","Urgence 24h","Microsoft utilise uniquement microsoft.com","Lien suspect"],expl:"Phishing Microsoft. Le domaine officiel est microsoft.com. Microsoft ne menace jamais de suspendre un compte par email."},
+  {id:'p6',type:'email',title:'Email DHL légitime',from:'noreply@dhl.com',subject:'Votre envoi 1Z999AA1 est en route',body:'Bonjour,\n\nVotre envoi DHL est en cours de livraison.\nNuméro de suivi : 1Z999AA1012345678\nLivraison prévue : demain entre 9h et 13h\n\nSuivre mon envoi sur dhl.com',isPhish:false,clues:["Domaine officiel dhl.com","Numéro de suivi précis","Pas de demande de paiement","Lien vers dhl.com"],expl:"Email légitime. Domaine dhl.com officiel, numéro de suivi précis, pas de demande urgente."},
+  {id:'p7',type:'site',title:'Faux site CAF',url:'https://caf-allocations-famille.fr/mon-espace',lock:true,content:'CAF - Mon compte\n\nConnectez-vous pour accéder à vos allocations\n\nNuméro allocataire : ___\nMot de passe : ___\n\n⚠️ Mise à jour obligatoire de vos coordonnées bancaires avant le 15',isReal:false,expl:"Faux site CAF. Le vrai site est caf.fr. HTTPS présent mais domaine frauduleux. La CAF ne demande JAMAIS vos coordonnées bancaires via un lien email."},
+  {id:'p8',type:'sms',title:'SMS banque frauduleux',from:'+33612345678',subject:'',body:'CREDIT AGRICOLE: Paiement suspect de 847€ détecté. Pour annuler: appelez le 0892 123 456 ou cliquez: https://ca-securite.net/bloquer',isPhish:true,clues:["Numéro inconnu","URL ca-securite.net suspect","Numéro surtaxé 0892","Crée la panique"],expl:"Vishing/Smishing bancaire. Votre banque appelle depuis ses numéros officiels uniquement. En cas de doute, appelez le numéro au dos de votre carte."},
+  {id:'p9',type:'site',title:'Vrai site ameli.fr',url:'https://www.ameli.fr/assure',lock:true,content:'Ameli - Votre compte Assurance Maladie\n\n→ Voir mes remboursements\n→ Commander une carte Vitale\n→ Médecin traitant',isReal:true,expl:"Site officiel de l\'Assurance Maladie. Domaine ameli.fr officiel, HTTPS valide."},
+  {id:'p10',type:'email',title:'Fausse facture EDF gonflée',from:'facture@edf-espace-client.net',subject:'Votre facture EDF — 847,32€',body:'Votre facture EDF de novembre s\'élève à 847,32€.\n\nMontant inhabituel dû à une anomalie.\n\nContestez votre facture :\nhttps://edf-espace-client.net/facture/nov',isPhish:true,clues:["Domaine edf-espace-client.net (pas edf.fr)","Montant exagéré pour choquer","EDF communique depuis edf.fr","Lien suspect"],expl:"Phishing EDF. Montant volontairement exagéré pour faire cliquer. Le vrai site EDF est edf.fr."},
+  {id:'p11',type:'sms',title:'Faux SMS CPF',from:'COMPTE-CPF',subject:'',body:'MonCompteFormation: Votre CPF de 2500€ expire le 31/12. Utilisez-le: https://mon-cpf-formation.fr/utiliser',isPhish:true,clues:["Domaine non officiel","Le vrai site est moncompteformation.gouv.fr","Le CPF n\'expire pas","Urgence artificielle"],expl:"Arnaque au CPF très répandue. Le vrai site est moncompteformation.gouv.fr. Les droits CPF n\'expirent pas."},
+  {id:'p12',type:'site',title:'Vrai site impots.gouv.fr',url:'https://www.impots.gouv.fr/accueil',lock:true,content:'impots.gouv.fr\nDirection Générale des Finances Publiques\n\n→ Accéder à mon espace particulier\n→ Télédéclarer mes revenus\n→ Consulter mes avis d\'imposition',isReal:true,expl:"Site officiel des impôts. Domaine .gouv.fr réservé à l\'État, HTTPS valide."}
+];
+
+const EMPREINTE_QS = [
+  {q:"Combien de réseaux sociaux utilises-tu ?",opts:[["Aucun",0],["1 à 2",1],["3 à 4",2],["5 ou plus",3]]},
+  {q:"Ton profil est-il public ou privé ?",opts:[["Tout privé",0],["Mixte",1],["Tout public",2]]},
+  {q:"As-tu déjà utilisé le même mot de passe sur plusieurs sites ?",opts:[["Jamais",0],["Parfois",1],["Souvent",2],["Toujours",3]]},
+  {q:"Tu utilises le 2FA (code SMS ou appli) ?",opts:[["Sur tout",0],["Sur quelques-uns",1],["Jamais",2]]},
+  {q:"Tu utilises des apps de géolocalisation (Snapchat, BeReal...) ?",opts:[["Non",0],["Parfois",1],["Oui, localisation toujours active",2]]},
+  {q:"Tu cliques sur les liens dans les emails sans vérifier l'expéditeur ?",opts:[["Jamais",0],["Parfois",1],["Souvent",2]]},
+,
+  {q:"Tu as des mots de passe de moins de 8 caractères sur certains comptes importants ?",opts:[["Non, tous solides",0],["1 ou 2",1],["Plusieurs",2],["La plupart",3]]},
+  {q:"Tu as activé le 2FA sur tes comptes importants (email, banque) ?",opts:[["Oui partout",0],["Sur la banque seulement",1],["Pas encore",2]]},
+  {q:"Tu as déjà cliqué sur un lien dans un email sans vérifier l\'expéditeur ?",opts:[["Jamais",0],["Rarement",1],["Parfois",2],["Souvent",3]]},
+  {q:"Tu connectes ton téléphone à des bornes USB publiques (gares, aéroports) ?",opts:[["Jamais",0],["Parfois avec câble perso",1],["Oui régulièrement",2]]},
+  {q:"Tu utilises un VPN quand tu es sur un Wi-Fi public ?",opts:[["Oui systématiquement",0],["Parfois",1],["Non jamais",2]]},
+  {q:"Tes applications ont-elles accès à ta localisation en permanence ?",opts:[["Non, uniquement lors de l\'utilisation",0],["Quelques-unes",1],["La plupart",2],["Toutes",3]]},
+  {q:"Tu as fait une sauvegarde récente de tes données importantes ?",opts:[["Oui, cette semaine",0],["Il y a 1 mois",1],["Il y a plus de 6 mois",2],["Jamais",3]]},
+  {q:"Tu vérifies les avis sur les apps avant de les installer ?",opts:[["Toujours",0],["Parfois",1],["Jamais",2]]}
+];
+
+const CTF = [
+  {id:'c1',tag:'César',pts:100,title:'Le message de César',desc:'Ce message a été chiffré avec le chiffre de César (décalage de 3). Retrouve le message original.',code:'FRPSUHQGUH OHV PHQDFHV SRXU SURWHJHU',answer:'COMPRENDRE LES MENACES POUR PROTEGER',hint:'Décale chaque lettre de 3 positions en arrière dans l\'alphabet. A devient X, B devient Y, C devient Z...',check:v=>v.toUpperCase().replace(/[^A-Z ]/g,'').trim().includes('COMPRENDRE')},
+  {id:'c2',tag:'Binaire',pts:150,title:'La signature binaire',desc:'Chaque groupe de 8 bits correspond à un caractère ASCII. Décode ce message.',code:'01000011 01011001 01000010 01000101 01010010',answer:'CYBER',hint:'01000011 = 67 en décimal = lettre C dans la table ASCII. Continue avec les autres groupes.',check:v=>v.toUpperCase().trim()==='CYBER'},
+  {id:'c3',tag:'Stéganographie',pts:200,title:'Le message caché',desc:'Un message est caché dans ce texte. Prends la première lettre de chaque mot.',code:'Sécurité   Élevée   Contre   Risques   Électroniques   Toujours',answer:'SECRET',hint:'Prends uniquement la PREMIÈRE lettre de chaque mot. Ignorer les accents.',check:v=>v.toUpperCase().trim()==='SECRET'},
+  {id:'c4',tag:'Hash MD5',pts:250,title:'Le hash mystère',desc:'Ce hash MD5 correspond à un mot de passe très courant. Trouve lequel.',code:'5f4dcc3b5aa765d61d8327deb882cf99',answer:'password',hint:'C\'est le mot anglais pour "mot de passe"... le plus utilisé au monde selon toutes les statistiques.',check:v=>v.toLowerCase().trim()==='password'},
+  {id:'c5',tag:'Base64',pts:175,title:'Message encodé',desc:'Ce texte est encodé en Base64. Décode-le pour trouver le message caché.',code:'SGFja2VyIG4nZXN0IHBhcyB1biBjcmltaW5lbA==',answer:'Hacker',hint:'Base64 est un encodage (pas un chiffrement). Utilise un décodeur en ligne comme base64decode.org',check:v=>v.toLowerCase().includes('hacker')},
+,
+  {id:'c6',tag:'Hexadécimal',pts:150,title:'Le code hex',desc:'Ce message est encodé en hexadécimal. Chaque paire = 1 lettre ASCII.',code:'48 41 43 4B 45 52',answer:'HACKER',hint:'48 en hexa = 72 en décimal = H en ASCII. Continue avec les autres paires.',check:v=>v.toUpperCase().trim()==='HACKER'},
+  {id:'c7',tag:'ROT13',pts:100,title:'Le chiffre ROT13',desc:'ROT13 décale chaque lettre de 13 positions. Décode ce message.',code:'PLORE FRPHEVGR',answer:'CYBER SECURITE',hint:'A devient N, B devient O, C devient P... P devient C, Y devient L, B devient O...',check:v=>v.toUpperCase().replace(/[^A-Z ]/g,'').trim()==='CYBER SECURITE'},
+  {id:'c8',tag:'Substitution',pts:150,title:'Le code alphanumérique',desc:'Chaque lettre est remplacée par sa position dans l\'alphabet. Décode.',code:'19-5-3-18-5-20',answer:'SECRET',hint:'A=1, B=2... S=19, E=5, C=3, R=18, E=5, T=20',check:v=>v.toUpperCase().trim()==='SECRET'},
+  {id:'c9',tag:'OSINT',pts:200,title:'La recherche OSINT',desc:'Quelle organisation française est la référence nationale en cybersécurité ? (sigle 5 lettres)',code:'Indice : agence gouvernementale créée en 2009, publie des recommandations et aide les victimes.',answer:'ANSSI',hint:'Agence Nationale de la Sécurité des Systèmes d\'Information.',check:v=>v.toUpperCase().trim()==='ANSSI'},
+  {id:'c10',tag:'Hexadécimal v2',pts:175,title:'Le drapeau hex',desc:'Décode ce message hexadécimal.',code:'48 41 43 4B',answer:'HACK',hint:'H=48, A=41, C=43, K=4B en hexadécimal.',check:v=>v.toUpperCase().trim()==='HACK'},
+  {id:'c11',tag:'Morse',pts:200,title:'Le message morse',desc:'Décode ce message en code Morse. Point = court, tiret = long.',code:'.-- .. ..-. .. / ... . -.-. ..- .-. .. - .',answer:'WIFI SECURITE',hint:'W=.-- I=.. F=..-. I=.. espace S=... E=. C=-.-. U=..- R=.-. I=.. T=- E=.',check:v=>v.toUpperCase().replace(/[^A-Z ]/g,'').trim().includes('WIFI')},
+  {id:'c12',tag:'Hash MD5',pts:200,title:'Le hash court',desc:'Ce hash MD5 correspond à un mot de 4 chiffres très courant.',code:'827ccb0eea8a706c4c34a16891f84e7b',answer:'12345',hint:'C\'est l\'un des 5 mots de passe les plus utilisés au monde. Très court.',check:v=>v.trim()==='12345'},
+  {id:'c13',tag:'Énigme logique',pts:150,title:'L\'énigme cyber',desc:'Je suis utilisé pour sécuriser les communications sur le web. Je suis un protocole. Je commence par H et finis par S. Que suis-je ?',code:'Indice supplémentaire : tu me vois dans la barre d\'adresse de ton navigateur sous forme de cadenas.',answer:'HTTPS',hint:'HTTP + chiffrement TLS = ?',check:v=>v.toUpperCase().trim()==='HTTPS'},
+  {id:'c14',tag:'Cryptographie',pts:225,title:'Le hash SHA1 courant',desc:'Ce hash SHA1 correspond à un mot très utilisé pour les tests en informatique (4 lettres).',code:'a94a8fe5ccb19ba61c4c0873d391e987982fbbd3',answer:'test',hint:'C\'est le mot qu\'on utilise partout pour tester en développement...',check:v=>v.toLowerCase().trim()==='test'},
+  {id:'c15',tag:'Énigme cyber',pts:175,title:'Qui suis-je ?',desc:'Je suis un numéro de téléphone gratuit. J\'aide les victimes de cyberharcèlement. Je suis disponible 7j/7. Quel est mon numéro ?',code:'Indice : je suis en France, je fais 4 chiffres et je ressemble à l\'année 3018.',answer:'3018',hint:'Numéro national contre le cyberharcèlement, gratuit et anonyme.',check:v=>v.trim()==='3018'}
+];
+
+const CYBER_SCENARIOS = [
+  {id:"s1",platform:"WhatsApp",title:"Le groupe sans Emma",context:"Emma, 14 ans, decouvre qu elle a ete exclue du groupe de classe. Des memes humiliants circulent sur elle.",msgs:[{s:"Lucas",t:"Vous avez vu la tete d Emma lmao",d:true},{s:"Ines",t:"Serieux elle est bizarre",d:true},{s:"Thomas",t:"Quelqu un lui a dit qu elle etait pas invitee",d:true}],legal:"Le cyberharcelement implique repetition. Exclure et se moquer = harcelement moral.",sanctions:"Jusqu a 2 ans et 30 000 euros. Si victime mineure : 3 ans et 45 000 euros.",queFaire:["Faire des captures comme preuves","En parler a un adulte de confiance","Appeler le 3018","Ne pas repondre aux provocations"]},
+  {id:"s2",platform:"Instagram",title:"La photo sans consentement",context:"Une photo d Antoine pleurant apres un match perdu est postee sur Instagram et tourne dans toute l ecole.",msgs:[{s:"Auteur",t:"Ptdr regardez la photo",d:true},{s:"Follower",t:"Trop mort lol",d:true},{s:"Ami",t:"C est pas cool de poster ca sans lui demander",d:false}],legal:"Droit a l image : publier une photo sans consentement est un delit (article 226-1).",sanctions:"1 an de prison et 45 000 euros d amende.",queFaire:["Signaler la photo sur Instagram","Demander la suppression","Porter plainte si pas supprimee","Contacter le 3018"]},
+  {id:"s3",platform:"SMS",title:"La sextorsion",context:"Jade, 16 ans, a envoye une photo intime. La personne la menace de tout envoyer si elle ne paie pas.",msgs:[{s:"Inconnu",t:"Tu as 48h pour envoyer 200 euros sinon je publie",d:true},{s:"Jade",t:"Arrete svp",d:false},{s:"Inconnu",t:"Tic tac",d:true}],legal:"Sextorsion = chantage aggrave. La victime n est JAMAIS responsable.",sanctions:"Chantage avec images intimes : jusqu a 7 ans de prison.",queFaire:["NE PAS PAYER - cela empire la situation","Bloquer et conserver les preuves","Appeler le 3018 immediatement","Porter plainte - des unites specialisees existent"]},
+  {id:"s4",platform:"TikTok",title:"La video virale",context:"Une video embarrassante d un eleve est postee sur TikTok et cumule des milliers de vues avec des commentaires moqueurs.",msgs:[{s:"User1",t:"Trop mort partage a tous",d:true},{s:"User2",t:"Il merite ca lol",d:true},{s:"Ami",t:"C est honteux de poster ca",d:false}],legal:"Diffusion d images portant atteinte a la dignite. Delit penal.",sanctions:"1 an et 45 000 euros si victime mineure.",queFaire:["Signaler la video TikTok","Contacter le 3018","Demander a ses contacts de signaler","Porter plainte"]},
+  {id:"s5",platform:"Discord",title:"Le serveur de harcelement",context:"Un groupe cree un serveur Discord pour humilier un camarade avec photomontages et insultes.",msgs:[{s:"Admin",t:"Nouveau meme de lui envoyez a tous",d:true},{s:"Membre1",t:"Lmaooo il va craquer",d:true},{s:"Membre2",t:"Je suis mal a l aise ca va trop loin",d:false}],legal:"Harcelement en bande organisee. Circonstance aggravante. Chaque membre peut etre poursuivi.",sanctions:"3 ans et 45 000 euros pour harcelement en reunion.",queFaire:["Signaler le serveur Discord","Conserver les preuves","Contacter un adulte de confiance","Porter plainte"]},
+  {id:"s6",platform:"Instagram",title:"La rumeur fabriquee",context:"Des eleves diffusent de fausses rumeurs sur Camille via des stories Instagram.",msgs:[{s:"Gossip",t:"Parait que Camille a fait quelque chose (fausse rumeur)",d:true},{s:"Follower",t:"Trop choquant si vrai",d:true},{s:"Amie",t:"C est faux arretez de partager",d:false}],legal:"Diffamation (faux faits) et harcelement si repete. Responsabilite de chaque personne qui partage.",sanctions:"Diffamation : 12 000 euros. Harcelement aggrave : jusqu a 3 ans.",queFaire:["Conserver les captures","Signaler les stories","Demander la suppression","Porter plainte pour diffamation"]},
+  {id:"s7",platform:"SMS",title:"Le happy slapping",context:"Une bagarre filmee et partagee en masse. La victime ne savait pas qu elle etait filmee.",msgs:[{s:"Auteur",t:"Video de la bagarre envoyez",d:true},{s:"Spectateur",t:"Trop violent je regarde pas",d:false},{s:"Autre",t:"C est drole non",d:true}],legal:"Diffusion de violence : delit. Filmer une agression sans la denoncer peut aussi etre un delit.",sanctions:"Diffusion de violence : 1 an et 15 000 euros.",queFaire:["Ne pas partager ni regarder","Signaler immediatement a un adulte","Appeler le 15 si la victime est blessee","Temoigner aupres de la police"]},
+  {id:"s8",platform:"Snapchat",title:"L extorsion",context:"Dylan a partage une photo intime. Cette personne menace de la publier si Dylan ne paie pas.",msgs:[{s:"Inconnu",t:"Tu as 48h pour envoyer 100 euros ou je publie tout",d:true},{s:"Dylan",t:"Arrete",d:false},{s:"Inconnu",t:"Payeras-tu ?",d:true}],legal:"Extorsion et chantage. Triple delit.",sanctions:"Extorsion : 5 ans et 75 000 euros. Avec images intimes : 7 ans.",queFaire:["NE PAS PAYER","Appeler le 3018 immediatement","Signaler a la police","Bloquer et conserver les preuves"]}
+]
+
+const OSINT_CASES = [
+  {
+    id:'o1',title:'Photo 1',filename:'osint_01.jpg',
+    answer:'1 avenue Victor Hugo, 03000 Moulins — Hôtel du Département de l\'Allier',
+    indices:[
+      'Bâtiment imposant en pierre de taille avec verrière centrale vitrée',
+      'Portail avec grilles bordeaux et panneaux d\'affichage officiels',
+      'Drapeaux tricolores visibles sur la façade',
+      'Panneau visible : "Hôtel du Département"'
+    ],
+    hint:'C\'est un bâtiment administratif départemental des années 80. Il gère tout le département de l\'Allier.'
+  },
+  {
+    id:'o2',title:'Photo 2',filename:'osint_02.jpg',
+    answer:'21 rue de Paris, 03000 Moulins — Hôtel Mercure / Hôtel de Paris',
+    indices:[
+      'Façade en pierre de taille avec auvent rouge à l\'entrée',
+      'Logo Mercure visible sur un panneau à gauche',
+      'Lion en pierre blanc devant l\'entrée',
+      'Boîte aux lettres jaune La Poste devant le bâtiment'
+    ],
+    hint:'C\'est un hôtel 4 étoiles situé sur la Nationale 7, en plein centre historique de Moulins.'
+  },
+  {
+    id:'o3',title:'Photo 3',filename:'osint_03.jpg',
+    answer:'Rue de Paris, 03000 Moulins — Porte de Paris',
+    indices:[
+      'Deux colonnes monumentales carrées en pierre se faisant face',
+      'Vue prise depuis le bas, entre les deux piliers',
+      'Architecture du XVIIIe siècle, style classique',
+      'Monument historique classé depuis 1929'
+    ],
+    hint:'Ces deux colonnes marquaient symboliquement l\'entrée de la ville côté Paris au XVIIIe siècle.'
+  },
+  {
+    id:'o4',title:'Photo 4',filename:'osint_04.jpg',
+    answer:'20 rue Aristide Briand, 03400 Yzeure — ARS Délégation Départementale Allier',
+    indices:[
+      'Bâtiment moderne en courbe avec grandes baies vitrées bleues',
+      'Drapeau tricolore et drapeau européen sur la façade',
+      'Logo République Française visible sur l\'entrée',
+      'Commune d\'Yzeure, limitrophe de Moulins'
+    ],
+    hint:'C\'est un bâtiment public de santé. L\'ARS coordonne la politique de santé dans la région Auvergne-Rhône-Alpes.'
+  },
+  {
+    id:'o5',title:'Photo 5',filename:'osint_05.jpg',
+    answer:'41 place d\'Allier, 03000 Moulins — Brasserie Le France',
+    indices:[
+      'Photo de nuit avec terrasses animées et lumières chaudes',
+      'Enseigne "LE FRANCE" visible en rouge et violet',
+      'Grande place piétonne avec bâtiments haussmanniens',
+      'Plusieurs restaurants et brasseries côte à côte'
+    ],
+    hint:'C\'est la grande place centrale de Moulins, rénovée en 2013 et rendue piétonne. Lieu de vie animé le soir.'
+  },
+  {
+    id:'o6',title:'Photo 6',filename:'osint_06.jpg',
+    answer:'Plan d\'eau des Champins, bords de l\'Allier, 03000 Moulins',
+    indices:[
+      'Photo hivernale avec neige au sol',
+      'Plan d\'eau / étang de 10 hectares visible',
+      'Panneau d\'information vert au bord de l\'eau',
+      'Espace naturel en bordure de l\'Allier, en pleine ville'
+    ],
+    hint:'Ce plan d\'eau est très prisé des pêcheurs et familles moulinoises. Il fait partie d\'un domaine de 56 hectares.'
+  },
+  {
+    id:'o7',title:'Photo 7',filename:'osint_07.jpg',
+    answer:'9 rue de Bad Vilbel, 03000 Moulins — Epitech Moulins',
+    indices:[
+      'Bâtiment moderne avec façade bleue et blanche',
+      'Prairie et arbres autour du bâtiment',
+      'Zone d\'activités en périphérie de Moulins',
+      'Première école informatique d\'excellence implantée dans une ville de moins de 100 000 habitants'
+    ],
+    hint:'C\'est une école d\'informatique fondée en 1999, présente dans 15 villes de France. Elle forme des experts en cybersécurité, IA et ingénierie logicielle.'
+  },
+  {
+    id:'o8',title:'Photo 8',filename:'osint_08.jpg',
+    answer:'Pont Régemortes, 03000 Moulins — sur l\'Allier',
+    indices:[
+      'Vue depuis un pont avec parapet en pierre ancien',
+      'Large rivière visible — l\'Allier',
+      'Ville de Moulins visible en arrière-plan sur la rive gauche',
+      'Poteau de signalisation jaune et marquage routier sur le pont'
+    ],
+    hint:'Ce pont relie Moulins à la rive droite de l\'Allier. C\'est l\'un des ponts historiques de la ville.'
+  },
+  {
+    id:'o9',title:'Photo 9',filename:'osint_09.jpg',
+    answer:'Jardins de Grillet, 03000 Moulins',
+    indices:[
+      'Bras d\'eau calme entouré d\'arbres à feuilles caduques',
+      'Feuilles mortes flottant sur l\'eau — ambiance automnale',
+      'Chemin de promenade longeant le cours d\'eau',
+      'Bâtiment blanc visible au loin à travers les arbres'
+    ],
+    hint:'Ce parc arboré est un espace de promenade apprécié des Moulinois, en bord de cours d\'eau.'
+  },
+  {
+    id:'o10',title:'Photo 10',filename:'osint_10.jpg',
+    answer:'Cours Jean Jaurès, 03000 Moulins',
+    indices:[
+      'Grande allée piétonne avec gravier et arbres alignés',
+      'Bancs publics le long de l\'allée',
+      'Maisons bourgeoises en pierre de taille de chaque côté',
+      'Panneau d\'exposition ou d\'affichage visible à gauche'
+    ],
+    hint:'C\'est l\'un des grands axes du centre-ville de Moulins, réhabilité en promenade piétonne. La CCI de l\'Allier y est installée.'
+  },
+  {
+    id:'o11',title:'Photo 11',filename:'osint_11.jpg',
+    answer:'Quartier Villars, Route de Montilly, 03000 Moulins — CNCS',
+    indices:[
+      'Grand bâtiment en pierre avec sol pavé',
+      'Banderole "10 ANS" répétée sur la façade',
+      'Portes cintrées avec arcs en plein cintre',
+      'Ancienne caserne de cavalerie du XVIIIe siècle reconvertie en musée'
+    ],
+    hint:'C\'est le seul musée au monde entièrement consacré aux costumes et décors de scène. Il conserve plus de 10 000 costumes de l\'Opéra de Paris et de la Comédie-Française.'
+  },
+  {
+    id:'o12',title:'Photo 12',filename:'osint_12.jpg',
+    answer:'Rue du Vert Galant, 03000 Moulins — Jardins bas de la Mal Coiffée',
+    indices:[
+      'Portail en fer forgé bleu-vert avec piliers en pierre',
+      'Jardin à la française visible à travers les grilles',
+      'Flèche gothique de la cathédrale Notre-Dame visible en arrière-plan',
+      'Tour médiévale visible derrière les arbres — le donjon'
+    ],
+    hint:'Ces jardins sont situés au pied du donjon de la Mal Coiffée, ancien château des Ducs de Bourbon. La "Mal Coiffée" tient son nom de son toit jugé disgracieux par Louis XIV.'
+  },
+];
+
+// ── STATE ──
+let ably, channel;
+let players = {};
+let teamDefs = [];
+let currentMod = 'quiz';
+let quizQ = [...QUIZ];
+let quizIdx = -1;
+let quizPhase = 'lobby';
+let quizAnswers = {};
+let timerInterval = null;
+let timerLeft = 15, timerDur = 15;
+let currentQ = null;
+let phishIdx = 0, phishAnswers = {};
+let empreinteIdx = 0;
+let ctfSubmissions = {};
+let cyberIdx = 0;
+let osintIdx = 0;
+let osintRevealedIndices = 0;
+let osintSubmissions = {};
+let osintTimerInt = null;
+let osintTimeLeft = 120;
+
+function pub(event, data) {
+  if (channel) channel.publish(event, data);
+}
+
+function initAbly() {
+  ably = new Ably.Realtime({ key: ABLY_KEY });
+  ably.connection.on('connected', () => {
+    document.getElementById('conn-pill').textContent = '⬤ Connecté';
+    document.getElementById('conn-pill').className = 'pill on';
+    document.getElementById('room-pill').textContent = 'Room: ' + ROOM;
+    generateQR();
+    switchMod('quiz');
+    toast('Connecté !');
+  });
+  ably.connection.on('disconnected', () => {
+    document.getElementById('conn-pill').textContent = '⬤ Déconnecté';
+    document.getElementById('conn-pill').className = 'pill off';
+  });
+  channel = ably.channels.get('cyberconf-' + ROOM);
+
+  // Debug
+  channel.subscribe(msg => {
+    if (msg.name === 'player:answer') {
+      console.log('[ANIMATEUR] recu answer:', JSON.stringify(msg.data).substr(0,200));
+      console.log('[ANIMATEUR] players:', Object.keys(players).length, 'ids:', Object.keys(players).join(','));
+    }
+  });
+
+  channel.subscribe('player:join', msg => {
+    const {id, name, team} = msg.data;
+    players[id] = {name, team:team||null, score:0, correct:0, answered:false};
+    if (teamDefs.length === 0) autoInitTeams();
+    pub('host:teams', { teams: getTeamPayload() });
+    pub('host:state', { phase: quizPhase, teams: getTeamPayload(), mod: currentMod, timeLeft: timerLeft });
+    updateRight();
+    toast(name + ' a rejoint !');
+  });
+  channel.subscribe('player:leave', msg => { delete players[msg.data.id]; updateRight(); });
+
+  channel.subscribe('player:answer', msg => {
+    const {id, answer, timeRemaining, mod} = msg.data;
+    // Auto-register joueur si inconnu (reconnexion possible)
+    if (!players[id]) {
+      const team = msg.data.team || null;
+      players[id] = {name: team || ('Joueur-'+id.substr(-4)), team, score:0, correct:0, answered:false};
+    }
+    if (mod === 'quiz') {
+      if (quizAnswers[id] !== undefined) return;
+      quizAnswers[id] = answer;
+      players[id].answered = true;
+      if (currentQ && answer === currentQ.correct) {
+        const pts = Math.max(50, Math.round(500 * (timeRemaining / timerDur)));
+        players[id].score += pts; players[id].correct++;
+        console.log('[ANIMATEUR] score update:', id, 'pts:', pts, 'total:', players[id].score);
+      }
+      updateLiveQuiz();
+    } else if (mod === 'phishing') {
+      phishAnswers[id] = answer;
+      // Calculer si correct
+      const activeCas = (window._phishPool || PHISHING_CASES)[phishIdx];
+      let phishCorrect = false;
+      if (activeCas) {
+        const expected = activeCas.isPhish !== undefined ? activeCas.isPhish : !activeCas.isReal;
+        phishCorrect = (answer === expected);
+        if (phishCorrect) {
+          players[id].score += 100;
+          players[id].correct++;
+        }
+      }
+      console.log('[ANIMATEUR] phish answer id:', id, 'correct:', phishCorrect, 'score:', players[id].score);
+      updateLivePhish();
+      updateRight();
+    } else if (mod === 'empreinte') {
+      const {qIndex, val} = answer;
+      if (!players[id].emp) players[id].emp = {};
+      players[id].emp[qIndex] = val;
+      // Points selon sensibilisation (moins d'exposition = mieux)
+      // val=0 = bonne pratique → 100pts, val=1 → 50pts, val>=2 → 0pts
+      const pts = val === 0 ? 100 : val === 1 ? 50 : 0;
+      if (pts > 0) { players[id].score += pts; players[id].correct++; }
+      updateLiveEmp();
+      updateRight();
+    } else if (mod === 'osint') {
+      const { text, team } = answer;
+      const teamDef = teamDefs.find(t => t.name === team);
+      osintSubmissions[id] = { text, team: team||players[id].name, teamColor: teamDef ? teamDef.color : 'var(--green)' };
+      updateOSINTSubmissions();
+    } else if (mod === 'ctf') {
+      const {challengeId, text} = answer;
+      if (!ctfSubmissions[challengeId]) ctfSubmissions[challengeId] = {};
+      const ch = CTF.find(c => c.id === challengeId);
+      const correct = ch && ch.check(text);
+      ctfSubmissions[challengeId][id] = {text, correct, name: players[id].name};
+      if (correct) { players[id].score += ch.pts; players[id].correct++; }
+      pub('host:ctf_result', {playerId:id, challengeId, correct, pts: correct ? ch.pts : 0});
+      updateLiveCTF();
+    }
+    updateRight();
+  });
+}
+
+function autoInitTeams() {
+  teamDefs = [0,1,2].map(i => ({
+    name: (document.getElementById('tn'+i).value||'').trim() || ('Équipe '+(i+1)),
+    color: document.getElementById('tc'+i).value || ['#ff4455','#4488ff','#00ff88'][i]
+  }));
+}
+
+function getTeamPayload() {
+  return teamDefs.map(t => ({
+    name:t.name, color:t.color,
+    count: Object.values(players).filter(p=>p.team===t.name).length
+  }));
+}
+
+// ── QR ──
+function generateQR() {
+  const url = window.location.href.replace('animateur.html','joueur.html') + '?room=' + ROOM;
+  document.getElementById('qr-url').textContent = url;
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+  s.onload = () => new QRCode(document.getElementById('qr-container'), {text:url,width:140,height:140,colorDark:'#00ff88',colorLight:'#1a2030'});
+  document.head.appendChild(s);
+}
+function copyUrl() { navigator.clipboard.writeText(document.getElementById('qr-url').textContent); toast('Lien copié !'); }
+
+// ── TEAMS ──
+function broadcastTeams() {
+  autoInitTeams();
+  pub('host:teams', { teams: getTeamPayload() });
+  updateLiveTeams(); updateTeamSB();
+  toast('Équipes envoyées !');
+}
+function updateLiveTeams() {
+  const el = document.getElementById('live-teams');
+  if (!teamDefs.length) { el.innerHTML=''; return; }
+  el.innerHTML = teamDefs.map(t => {
+    const m = Object.values(players).filter(p=>p.team===t.name);
+    const ts = m.reduce((s,p)=>s+p.score,0);
+    return '<div class="trow" style="border-left-color:'+t.color+'">'
+      +'<div style="width:8px;height:8px;border-radius:50%;background:'+t.color+';flex-shrink:0"><\/div>'
+      +'<div style="flex:1"><div style="font-size:12px;font-weight:700;color:'+t.color+'">'+t.name+'<\/div>'
+      +'<div style="font-size:10px;color:var(--muted)">'+m.length+' joueur(s) · '+m.map(p=>p.name).slice(0,3).join(', ')+'<\/div><\/div>'
+      +'<div style="font-family:var(--mono);font-size:13px;font-weight:700;color:'+t.color+'">'+ts+'<\/div><\/div>';
+  }).join('');
+}
+function updateTeamSB() {
+  const el = document.getElementById('team-sb');
+  if (!teamDefs.length) { el.innerHTML='<div style="font-size:11px;color:var(--muted)">Envoie les équipes →</div>'; return; }
+  const sorted = teamDefs.map(t=>{
+    const m = Object.values(players).filter(p=>p.team===t.name);
+    const total = m.reduce((s,p)=>s+p.score,0);
+    return {name:t.name, color:t.color, total, count:m.length};
+  }).sort((a,b)=>b.total-a.total);
+  const r=['🥇','🥈','🥉'];
+  el.innerHTML = sorted.map((t,i)=>
+    '<div class="trow" style="border-left-color:'+t.color+'">'
+    +'<span>'+r[i]+'</span>'
+    +'<span style="font-size:12px;font-weight:700;color:'+t.color+';flex:1;margin:0 6px">'+t.name+'</span>'
+    +'<span style="font-size:10px;color:var(--muted)">'+t.count+'👤</span>'
+    +'<span style="font-family:var(--mono);font-size:14px;font-weight:700;color:'+t.color+'"> '+t.total+' pts</span>'
+    +'</div>'
+  ).join('');
+}
+
+// ── RIGHT PANEL ──
+function updateRight() {
+  updateTeamSB(); updateLiveTeams();
+  const pl = document.getElementById('players-list');
+  const list = Object.values(players);
+  if (!list.length) { pl.innerHTML='<div style="font-size:11px;color:var(--muted)">En attente...<\/div>'; }
+  else pl.innerHTML = list.map(p=>{const t=p.team?teamDefs.find(x=>x.name===p.team):null;return '<div class="prow"><div class="pdot" style="background:'+(p.answered?'var(--green)':'var(--muted)')+'"><\/div><div style="font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+p.name+'<\/div>'+(t?'<div style="font-size:10px;font-family:var(--mono);color:'+t.color+'">'+t.name+'<\/div>':'')+'<div style="font-family:var(--mono);font-size:11px;font-weight:700;color:'+(t?t.color:'var(--green)')+'">'+p.score+'<\/div><\/div>';}).join('');
+  const sb = document.getElementById('indiv-sb');
+  // Group by team, sum scores
+  const teamTotals = {};
+  list.forEach(p => {
+    if (!p.team) return;
+    if (!teamTotals[p.team]) { const t=teamDefs.find(x=>x.name===p.team); teamTotals[p.team]={name:p.team,score:0,correct:0,color:t?t.color:'var(--green)'}; }
+    teamTotals[p.team].score += p.score;
+    teamTotals[p.team].correct += p.correct;
+  });
+  const sorted = Object.values(teamTotals).sort((a,b)=>b.score-a.score);
+  if (!sorted.length) { sb.innerHTML='<div style="font-size:11px;color:var(--muted)">Aucun score<\/div>'; return; }
+  const r=['🥇','🥈','🥉'];
+  sb.innerHTML = sorted.map((p,i)=>{const t=p.team?teamDefs.find(x=>x.name===p.team):null;return '<div class="srow"><div class="sr-rank">'+(r[i]||'#'+(i+1))+'<\/div><div class="sr-name" style="'+(t?'color:'+t.color:'')+'">'+p.name+'<\/div><div class="sr-pts" style="'+(t?'color:'+t.color:'')+'">'+p.score+'<\/div><\/div>';}).join('');
+  document.getElementById('pcount').textContent = list.length + ' joueurs';
+}
+
+// ── MOD SWITCH ──
+function switchMod(mod) {
+  currentMod = mod;
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('act'));
+  document.getElementById('nb-'+mod).classList.add('act');
+  document.getElementById('phase-pill').textContent = mod;
+  if (channel) pub('host:mod_change', { mod });
+  document.getElementById('live-answers').innerHTML = '<div style="font-size:11px;color:var(--muted)">—<\/div>';
+  if (mod==='quiz') renderQuizCenter();
+  else if (mod==='phishing') renderPhishCenter();
+  else if (mod==='empreinte') renderEmpCenter();
+  else if (mod==='ctf') renderCTFCenter();
+  else if (mod==='password') renderPwCenter();
+  else if (mod==='cyber') renderCyberCenter();
+  else if (mod==='osint') renderOSINTCenter();
+}
+
+function applyTheme() {
+  const t = document.getElementById('theme-sel').value;
+  quizQ = t ? QUIZ.filter(q=>q.theme===t) : [...QUIZ];
+  quizQ = [...quizQ].sort(()=>Math.random()-.5);
+  quizIdx=-1; quizPhase='lobby'; renderQuizCenter();
+}
+
+// ══ QUIZ ══
+function renderQuizCenter() {
+  const c = document.getElementById('center');
+  if (quizPhase==='lobby') {
+    c.innerHTML = '<div class="card"><div style="font-size:20px;font-weight:800;margin-bottom:8px">❓ Quiz / Kahoot<\/div>'
+      +'<div style="font-size:13px;color:var(--muted);margin-bottom:20px">'+quizQ.length+' questions · '+Object.keys(players).length+' joueur(s)<\/div>'
+      +'<button class="btn bg" onclick="startQuiz()" style="font-size:16px;padding:14px 36px">▶ Démarrer<\/button><\/div>';
+  } else if (quizPhase==='question' && currentQ) {
+    const pct=timerLeft/timerDur*100, tc=pct>50?'var(--green)':pct>25?'var(--amber)':'var(--red)';
+    const answered=Object.keys(quizAnswers).length, total=Object.keys(players).length;
+    const dots=quizQ.map((_,i)=>'<div class="pd '+(i<quizIdx?'done':i===quizIdx?'cur':'')+'" style="max-width:20px"><\/div>').join('');
+    c.innerHTML = '<div class="card">'
+      +'<div class="pdots">'+dots+'<\/div>'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+      +'<span style="font-size:10px;font-family:var(--mono);color:var(--amber);padding:2px 8px;border-radius:20px;background:rgba(255,170,0,.1);border:1px solid rgba(255,170,0,.3)">'+currentQ.theme+'<\/span>'
+      +'<span style="font-size:11px;color:var(--muted);font-family:var(--mono)">Q'+(quizIdx+1)+'/'+quizQ.length+'<\/span>'
+      +'<span style="font-family:var(--mono);font-size:40px;font-weight:700;color:'+tc+';margin-left:auto" id="tnum">'+timerLeft+'<\/span><\/div>'
+      +'<div class="tbar"><div class="tfill" id="tfill" style="width:'+pct+'%;background:'+tc+'"><\/div><\/div>'
+      +'<div style="font-size:20px;font-weight:700;margin-bottom:16px;line-height:1.4">'+currentQ.q+'<\/div>'
+      +'<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">'
+      +currentQ.opts.map((o,i)=>'<div class="opt-box'+(i===currentQ.correct?' opt-correct':'')+'" style="'+(i===currentQ.correct?'border-color:var(--green);':'')+'"><span class="opt-num">'+(i+1)+'.<\/span>'+o+'<\/div>').join('')
+      +'<\/div>'
+      +'<div style="font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:12px">'+answered+'/'+total+' ont répondu<\/div>'
+      +'<div class="flex">'
+      +'<button class="btn bg" onclick="revealQuiz()">✓ Révéler<\/button>'
+      +'<button class="btn bo" onclick="clearInterval(timerInterval)">⏸ Stop<\/button>'
+      +'<\/div><\/div>';
+    updateLiveQuiz();
+  } else if (quizPhase==='reveal' && currentQ) {
+    const isLast=quizIdx>=quizQ.length-1;
+    const cc=Object.values(quizAnswers).filter(a=>a===currentQ.correct).length;
+    c.innerHTML = '<div class="card">'
+      +'<div style="color:var(--amber);font-size:11px;font-family:var(--mono);margin-bottom:8px">RÉVÉLATION · '+currentQ.theme+'<\/div>'
+      +'<div style="font-size:18px;font-weight:700;margin-bottom:12px">'+currentQ.q+'<\/div>'
+      +'<div style="padding:12px;background:rgba(0,255,136,.08);border:1px solid var(--green);border-radius:8px;color:var(--green);font-size:16px;font-weight:700;margin-bottom:10px">✓ '+(currentQ.correct+1)+'. '+currentQ.opts[currentQ.correct]+'<\/div>'
+      +'<div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.6">'+currentQ.expl+'<\/div>'
+      +'<div style="font-size:12px;color:var(--amber);font-family:var(--mono);margin-bottom:14px">'+cc+'/'+Object.keys(players).length+' bonne(s) réponse(s)<\/div>'
+      +'<div class="flex">'+(isLast?'<button class="btn bg" onclick="showPodium()">🏆 Podium<\/button>':'<button class="btn bg" onclick="nextQ()">Suivant →<\/button>')
+      +' <button class="btn bo" onclick="showPodium()">🏆 Podium<\/button><\/div><\/div>';
+  } else if (quizPhase==='podium') {
+    const sorted=Object.values(players).sort((a,b)=>b.score-a.score);
+    const ts=teamDefs.map(t=>{const m=Object.values(players).filter(p=>p.team===t.name);return{name:t.name,color:t.color,total:m.reduce((s,p)=>s+p.score,0)};}).sort((a,b)=>b.total-a.total);
+    const r=['🥇','🥈','🥉'];
+    c.innerHTML = '<div class="card">'
+      +'<div style="font-size:22px;font-weight:800;color:var(--amber);font-family:var(--mono);margin-bottom:16px">🏆 PODIUM FINAL<\/div>'
+      +(ts.length?'<div class="sl">équipes<\/div>'+ts.map((t,i)=>'<div class="srow" style="border-left:3px solid '+t.color+'"><div class="sr-rank">'+r[i]+'<\/div><div class="sr-name" style="color:'+t.color+'">'+t.name+'<\/div><div class="sr-pts" style="color:'+t.color+'">'+t.total+'<\/div><\/div>').join('')+'<div class="div"><\/div>':'')
+      +'<div class="sl">individuel<\/div>'
+      +sorted.slice(0,10).map((p,i)=>{const t=p.team?teamDefs.find(x=>x.name===p.team):null;return '<div class="srow"><div class="sr-rank">'+(r[i]||'#'+(i+1))+'<\/div><div class="sr-name" style="'+(t?'color:'+t.color:'')+'">'+p.name+'<\/div><div class="sr-pts">'+p.score+'<\/div><\/div>';}).join('')
+      +'<button class="btn bo" onclick="resetQuiz()" style="margin-top:14px">↺ Recommencer<\/button><\/div>';
+  }
+}
+
+function startQuiz() {
+  const countSel = parseInt(document.getElementById('quiz-count-sel').value)||15;
+  let pool = document.getElementById('theme-sel').value
+    ? QUIZ.filter(q=>q.theme===document.getElementById('theme-sel').value)
+    : [...QUIZ];
+  // Shuffle pool
+  pool = pool.sort(()=>Math.random()-.5);
+  // Take N questions
+  quizQ = countSel > 0 ? pool.slice(0, countSel) : pool;
+  quizIdx=-1; quizPhase='question';
+  Object.keys(players).forEach(id=>{players[id].score=0;players[id].correct=0;});
+  nextQ();
+}
+function nextQ() {
+  quizIdx++;
+  if (quizIdx>=quizQ.length) { showPodium(); return; }
+  currentQ=quizQ[quizIdx]; quizAnswers={};
+  quizPhase='question';
+  timerDur=parseInt(document.getElementById('timer-sel').value)||15;
+  timerLeft=timerDur;
+  Object.keys(players).forEach(id=>players[id].answered=false);
+  pub('host:question',{index:quizIdx,total:quizQ.length,question:{q:currentQ.q,opts:currentQ.opts,theme:currentQ.theme},timerDuration:timerDur,mod:'quiz'});
+  startTimer(); renderQuizCenter();
+  document.getElementById('phase-pill').textContent='Q'+(quizIdx+1)+'/'+quizQ.length;
+}
+function startTimer() {
+  clearInterval(timerInterval);
+  timerInterval=setInterval(()=>{
+    timerLeft--;
+    pub('host:tick',{timeLeft:timerLeft});
+    const n=document.getElementById('tnum'),f=document.getElementById('tfill');
+    if(n){const pct=timerLeft/timerDur*100,tc=pct>50?'var(--green)':pct>25?'var(--amber)':'var(--red)';n.textContent=timerLeft;n.style.color=tc;if(f){f.style.width=pct+'%';f.style.background=tc;}}
+    if(timerLeft<=0) revealQuiz();
+  },1000);
+}
+function revealQuiz() {
+  if(quizPhase!=='question') return;
+  clearInterval(timerInterval); quizPhase='reveal';
+  const teamScores = {};
+  teamDefs.forEach(t => {
+    const m = Object.values(players).filter(p=>p.team===t.name);
+    teamScores[t.name] = { score: m.reduce((s,p)=>s+p.score,0), color: t.color };
+  });
+  pub('host:reveal',{correct:currentQ.correct,correctText:currentQ.opts[currentQ.correct],expl:currentQ.expl,mod:'quiz',
+    scores:Object.fromEntries(Object.entries(players).map(([id,p])=>[id,{score:p.score,correct:p.correct}])),
+    teamScores
+  });
+  renderQuizCenter(); updateRight();
+}
+function showPodium() {
+  clearInterval(timerInterval); quizPhase='podium';
+  const sorted=Object.values(players).sort((a,b)=>b.score-a.score);
+  const ts=teamDefs.map(t=>{const m=Object.values(players).filter(p=>p.team===t.name);return{name:t.name,color:t.color,total:m.reduce((s,p)=>s+p.score,0)};}).sort((a,b)=>b.total-a.total);
+  pub('host:podium',{scores:sorted.map(p=>({name:p.name,score:p.score,correct:p.correct,team:p.team||null})),teams:ts,mod:'quiz'});
+  renderQuizCenter(); updateRight();
+  document.getElementById('phase-pill').textContent='podium';
+}
+function resetQuiz() {
+  clearInterval(timerInterval); quizPhase='lobby'; quizIdx=-1; currentQ=null; quizAnswers={};
+  Object.keys(players).forEach(id=>{players[id].score=0;players[id].correct=0;});
+  pub('host:reset',{mod:'quiz'}); renderQuizCenter(); updateRight();
+  document.getElementById('phase-pill').textContent='lobby';
+}
+function updateLiveQuiz() {
+  if(!currentQ) return;
+  const colors=['#e21b3c','#1368ce','#d89e00','#26890c'];
+  const total=Math.max(1,Object.keys(players).length);
+  const counts=[0,0,0,0];
+  Object.values(quizAnswers).forEach(a=>{if(a>=0&&a<4)counts[a]++;});
+  document.getElementById('live-answers').innerHTML=currentQ.opts.map((o,i)=>{
+    const pct=Math.round(counts[i]/total*100);
+    return '<div class="abar-row"><div class="abar-lbl" style="color:'+colors[i]+'">'+(i+1)+'<\/div><div class="abar-track"><div class="abar-fill" style="width:'+pct+'%;background:'+colors[i]+'">'+(pct>15?pct+'%':'')+'<\/div><\/div><div class="abar-n">'+counts[i]+'<\/div><\/div>';
+  }).join('');
+}
+
+// ══ PHISHING ══
+function renderPhishCenter() {
+  const c=document.getElementById('center');
+  const cas=getActiveCases()[phishIdx];
+  const dots=PHISHING_CASES.map((_,i)=>'<div class="pd '+(i<phishIdx?'done':i===phishIdx?'cur':'')+'" style="max-width:20px"><\/div>').join('');
+  c.innerHTML='<div class="card">'
+    +'<div class="pdots">'+dots+'<\/div>'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
+    +'<span style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:20px;border:1px solid '+(cas.isPhish||!cas.isReal?'var(--red)':'var(--green)')+';color:'+(cas.isPhish||!cas.isReal?'var(--red)':'var(--green)')+'">'+cas.type.toUpperCase()+'<\/span>'
+    +'<span style="font-size:14px;font-weight:700">'+cas.title+'<\/span>'
+    +'<span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)">'+(phishIdx+1)+'/'+getActiveCases().length+'<\/span><\/div>'
+    +(cas.type==='email'?
+      '<div style="background:var(--bg3);border-radius:8px;overflow:hidden;margin-bottom:12px">'
+      +'<div style="padding:9px 12px;background:var(--bg4);font-size:12px;border-bottom:1px solid var(--border)">'
+      +'<div><span style="color:var(--muted)">De : <\/span><strong>'+cas.from+'<\/strong><\/div>'
+      +'<div><span style="color:var(--muted)">Objet : <\/span><strong>'+cas.subject+'<\/strong><\/div><\/div>'
+      +'<div style="padding:14px;font-size:13px;line-height:1.8;white-space:pre-line">'+cas.body+'<\/div><\/div>'
+    :
+      '<div style="background:var(--bg3);border-radius:8px;overflow:hidden;margin-bottom:12px">'
+      +'<div style="padding:7px 12px;background:var(--bg4);font-size:11px;font-family:var(--mono);border-bottom:1px solid var(--border)">'
+      +(cas.lock?'🔒':'⚠')+' '+cas.url+'<\/div>'
+      +'<div style="padding:14px;font-size:13px;white-space:pre-line">'+cas.content+'<\/div><\/div>'
+    )
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px">'
+    +(cas.clues||[]).map(cl=>'<div style="font-size:11px;padding:6px 10px;border-radius:5px;background:var(--bg3);border:1px solid var(--border)">'+cl+'<\/div>').join('')
+    +'<\/div>'
+    +'<div class="flex" style="margin-bottom:12px">'
+    +'<button class="btn bg" onclick="sendPhish()">📡 Envoyer aux joueurs<\/button>'
+    +'<button class="btn bo" onclick="revealPhish()">Révéler →<\/button><\/div>'
+    +'<div id="phish-rev" style="display:none;padding:12px;border-radius:8px;font-size:13px;line-height:1.6;background:'+(cas.isPhish||!cas.isReal?'rgba(255,68,85,.08)':'rgba(0,255,136,.08)')+';border:1px solid '+(cas.isPhish||!cas.isReal?'var(--red)':'var(--green)')+';color:'+(cas.isPhish||!cas.isReal?'#ff9999':'var(--green)')+'"> '+(cas.isPhish||!cas.isReal?'⚠ PHISHING / FRAUDULEUX':'✓ LÉGITIME')+' — '+cas.expl+'<\/div>'
+    +'<div class="flex" style="margin-top:12px">'
+    +'<button class="btn bo bsm" onclick="phishIdx=Math.max(0,phishIdx-1);phishAnswers={};renderPhishCenter()" '+(phishIdx===0?'disabled':'')+'>← Préc<\/button>'
+    +'<button class="btn bg bsm" onclick="phishIdx=Math.min(PHISHING_CASES.length-1,phishIdx+1);phishAnswers={};renderPhishCenter()" '+(phishIdx===getActiveCases().length-1?'disabled':'')+'>Suiv →<\/button>'
+    +'<\/div><\/div>';
+  updateLivePhish();
+}
+function shufflePhish() {
+  const count = parseInt(document.getElementById('phish-count-sel').value)||6;
+  const pool = [...PHISHING_CASES].sort(()=>Math.random()-.5);
+  // Replace PHISHING_CASES with shuffled subset for this session
+  window._activeCases = count > 0 ? pool.slice(0, count) : pool;
+  phishIdx = 0; phishAnswers = {};
+  renderPhishCenter();
+  toast('Cas mélangés — '+window._activeCases.length+' cas pour cette session');
+}
+function getActiveCases() { return window._activeCases || PHISHING_CASES; }
+function shuffleAndStartPhish() {
+  const countEl = document.getElementById('phish-count');
+  const n = countEl ? (parseInt(countEl.value)||6) : 6;
+  const shuffled = [...PHISHING_CASES].sort(()=>Math.random()-.5);
+  window._phishPool = n > 0 ? shuffled.slice(0,n) : shuffled;
+  phishIdx = 0; phishAnswers = {};
+  renderPhishCenter();
+  toast('Session melangee — '+window._phishPool.length+' cas');
+}
+function getPhishPool() { return window._phishPool || PHISHING_CASES; }
+function sendPhish() {
+  const cas=getPhishPool()[phishIdx]; phishAnswers={};
+  pub('host:phishing',{index:phishIdx,cas:{title:cas.title,type:cas.type,from:cas.from||'',subject:cas.subject||'',body:cas.body||cas.content||'',url:cas.url||'',lock:cas.lock||false,isPhish:cas.isPhish!==undefined?cas.isPhish:!cas.isReal},mod:'phishing'});
+  toast('Cas envoyé !');
+}
+function revealPhish() {
+  const r=document.getElementById('phish-rev'); if(r) r.style.display='block';
+  const cas=(window._phishPool||PHISHING_CASES)[phishIdx];
+  const isPhish = cas.isPhish!==undefined ? cas.isPhish : !cas.isReal;
+  const teamScores = {};
+  teamDefs.forEach(t => {
+    const m = Object.values(players).filter(p=>p.team===t.name);
+    teamScores[t.name] = {score: m.reduce((s,p)=>s+p.score,0), color: t.color};
+  });
+  const scores = Object.fromEntries(Object.entries(players).map(([id,p])=>[id,{score:p.score,correct:p.correct}]));
+  console.log('[ANIMATEUR] revealPhish players:', JSON.stringify(scores));
+  console.log('[ANIMATEUR] revealPhish teamScores:', JSON.stringify(teamScores));
+  pub('host:reveal',{mod:'phishing', isPhish, expl:cas.expl, scores, teamScores});
+  updateRight();
+}
+function updateLivePhish() {
+  const cas=PHISHING_CASES[phishIdx];
+  const expected=cas.isPhish!==undefined?cas.isPhish:!cas.isReal;
+  const votes=Object.values(phishAnswers);
+  const fp=votes.filter(v=>v===true).length, fl=votes.filter(v=>v===false).length;
+  const total=Math.max(1,Object.keys(players).length);
+  document.getElementById('live-answers').innerHTML=
+    '<div class="abar-row"><div class="abar-lbl" style="color:var(--red)">⚠<\/div><div class="abar-track"><div class="abar-fill" style="width:'+Math.round(fp/total*100)+'%;background:#e21b3c">'+fp+'<\/div><\/div><div class="abar-n">'+fp+'<\/div><\/div>'
+    +'<div class="abar-row"><div class="abar-lbl" style="color:var(--green)">✓<\/div><div class="abar-track"><div class="abar-fill" style="width:'+Math.round(fl/total*100)+'%;background:var(--green)">'+fl+'<\/div><\/div><div class="abar-n">'+fl+'<\/div><\/div>'
+    +'<div style="font-size:11px;color:var(--muted);margin-top:6px;font-family:var(--mono)">'+votes.length+'/'+Object.keys(players).length+' ont voté<\/div>';
+}
+
+// ══ EMPREINTE ══
+function renderEmpCenter() {
+  empreinteIdx=0;
+  const c=document.getElementById('center');
+  c.innerHTML='<div class="card">'
+    +'<div style="font-size:20px;font-weight:800;margin-bottom:8px">👣 Empreinte Numérique<\/div>'
+    +'<div style="font-size:13px;color:var(--muted);margin-bottom:16px">Les élèves répondent sur leur téléphone. Les réponses arrivent en temps réel.<\/div>'
+    +'<button class="btn bg" onclick="sendEmpQ(0)" style="margin-bottom:14px">📡 Envoyer question 1<\/button>'
+    +'<div id="emp-live"><\/div><\/div>';
+}
+function sendEmpQ(idx) {
+  if(idx>=EMPREINTE_QS.length){showEmpResults();return;}
+  empreinteIdx=idx;
+  const q=EMPREINTE_QS[idx];
+  pub('host:empreinte',{index:idx,total:EMPREINTE_QS.length,question:q.q,opts:q.opts.map(o=>o[0])});
+  const c=document.getElementById('center');
+  c.innerHTML='<div class="card">'
+    +'<div style="font-size:14px;font-weight:800;margin-bottom:4px">👣 Q'+(idx+1)+'/'+EMPREINTE_QS.length+' — Empreinte<\/div>'
+    +'<div style="font-size:18px;font-weight:700;margin-bottom:16px;line-height:1.4">'+q.q+'<\/div>'
+    +'<div style="display:flex;flex-direction:column;gap:7px;margin-bottom:16px">'
+    +q.opts.map((o,i)=>'<div class="opt-box"><span class="opt-num">'+(i+1)+'.<\/span>'+o[0]+'<\/div>').join('')
+    +'<\/div>'
+    +'<div id="emp-live" style="margin-bottom:14px"><\/div>'
+    +'<button class="btn bg" onclick="sendEmpQ('+(idx+1)+')">'+(idx===EMPREINTE_QS.length-1?'Voir résultats →':'Question suivante →')+'<\/button>'
+    +'<\/div>';
+  updateLiveEmp();
+  toast('Question '+(idx+1)+' envoyée !');
+}
+function updateLiveEmp() {
+  const el=document.getElementById('emp-live'); if(!el) return;
+  const answered=Object.values(players).filter(p=>p.emp&&Object.keys(p.emp).length>empreinteIdx).length;
+  el.innerHTML='<div style="font-size:11px;color:var(--muted);font-family:var(--mono)">'+answered+'/'+Object.keys(players).length+' ont répondu<\/div>';
+}
+function showEmpResults() {
+  const teamScores = {};
+  teamDefs.forEach(t => {
+    const m = Object.values(players).filter(p=>p.team===t.name);
+    teamScores[t.name] = {score: m.reduce((s,p)=>s+p.score,0), color: t.color};
+  });
+  pub('host:empreinte_scores', {
+    scores: Object.fromEntries(Object.entries(players).map(([id,p])=>[id,{score:p.score,correct:p.correct}])),
+    teamScores
+  });
+  const scores=Object.values(players).map(p=>{const total=Object.values(p.emp||{}).reduce((s,v)=>s+v,0);return{name:p.name,pct:Math.round(total/10*100)};}).sort((a,b)=>a.pct-b.pct);
+  const c=document.getElementById('center');
+  c.innerHTML='<div class="card">'
+    +'<div style="font-size:20px;font-weight:800;margin-bottom:14px">👣 Résultats — Empreinte<\/div>'
+    +scores.map(s=>'<div class="srow"><div class="sr-name">'+s.name+'<\/div><div style="flex:1;margin:0 10px"><div style="height:14px;background:var(--bg4);border-radius:4px;overflow:hidden"><div style="width:'+s.pct+'%;height:100%;background:'+(s.pct<30?'var(--green)':s.pct<60?'var(--amber)':'var(--red)')+';border-radius:4px"><\/div><\/div><\/div><div class="sr-pts" style="color:'+(s.pct<30?'var(--green)':s.pct<60?'var(--amber)':'var(--red)')+'">'+s.pct+'%<\/div><\/div>').join('')
+    +'<button class="btn bo" onclick="renderEmpCenter()" style="margin-top:12px">↺ Recommencer<\/button><\/div>';
+  pub('host:empreinte_end',{scores});
+}
+
+// ══ CTF ══
+function renderCTFCenter() {
+  ctfSubmissions={};
+  const c=document.getElementById('center');
+  c.innerHTML='<div class="card">'
+    +'<div style="font-size:20px;font-weight:800;margin-bottom:8px">🚩 CTF Initiation<\/div>'
+    +'<div style="font-size:13px;color:var(--muted);margin-bottom:14px">Envoie les challenges un par un. Les soumissions arrivent en direct.<\/div>'
+    +CTF.map(ch=>'<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+      +'<span style="font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:20px;border:1px solid var(--amber);color:var(--amber)">'+ch.tag+'<\/span>'
+      +'<span style="font-size:13px;font-weight:700">'+ch.title+'<\/span>'
+      +'<span style="margin-left:auto;font-size:11px;color:var(--amber);font-family:var(--mono)">'+ch.pts+' pts<\/span><\/div>'
+      +'<div style="font-size:12px;color:var(--muted);margin-bottom:8px">'+ch.desc+'<\/div>'
+      +'<div style="font-family:var(--mono);font-size:12px;background:var(--bg);padding:8px;border-radius:5px;color:var(--green);margin-bottom:8px;word-break:break-all">'+ch.code+'<\/div>'
+      +'<div class="flex">'
+      +'<button class="btn bg bsm" onclick="sendCTF(\''+ch.id+'\')">📡 Envoyer<\/button>'
+      +'<div id="ctf-sub-'+ch.id+'" style="font-size:11px;color:var(--muted);font-family:var(--mono)">0 soumission(s)<\/div><\/div>'
+      +'<div id="ctf-res-'+ch.id+'" style="margin-top:6px"><\/div>'
+      +'<\/div>').join('')
+    +'<\/div>';
+}
+function sendCTF(id) {
+  const ch=CTF.find(c=>c.id===id); if(!ch) return;
+  ctfSubmissions[id]={};
+  pub('host:ctf',{challengeId:id,tag:ch.tag,title:ch.title,desc:ch.desc,code:ch.code,hint:ch.hint,pts:ch.pts});
+  toast('Challenge envoyé !');
+}
+function updateLiveCTF() {
+  CTF.forEach(ch=>{
+    const subs=ctfSubmissions[ch.id]||{};
+    const el=document.getElementById('ctf-sub-'+ch.id);
+    const rel=document.getElementById('ctf-res-'+ch.id);
+    if(el) el.textContent=Object.keys(subs).length+' soumission(s)';
+    if(rel) rel.innerHTML=Object.values(subs).filter(s=>s.correct).map(s=>'<div style="font-size:11px;color:var(--green);font-family:var(--mono)">✓ '+s.name+'<\/div>').join('');
+  });
+  const all=Object.entries(ctfSubmissions).flatMap(([id,subs])=>Object.values(subs));
+  document.getElementById('live-answers').innerHTML='<div style="font-size:11px;color:var(--muted);font-family:var(--mono)">'+all.filter(s=>s.correct).length+' ✓ correct(s) · '+all.filter(s=>!s.correct).length+' ✗<\/div>'+all.filter(s=>s.correct).slice(-5).map(s=>'<div style="font-size:11px;color:var(--green);padding:3px 0">✓ '+s.name+'<\/div>').join('');
+}
+
+// ══ PASSWORD ══
+function renderPwCenter() {
+  const c=document.getElementById('center');
+  c.innerHTML='<div class="card">'
+    +'<div style="font-size:20px;font-weight:800;margin-bottom:8px">🔑 Password Checker — Démo live<\/div>'
+    +'<div style="font-size:13px;color:var(--muted);margin-bottom:16px">Mode animateur uniquement. Demande des suggestions à la salle !<\/div>'
+    +'<input type="text" id="pw-inp" placeholder="Tape un mot de passe..." style="font-size:20px;font-family:var(--mono);padding:14px;margin-bottom:10px" oninput="checkPw(this.value)" autocomplete="off" spellcheck="false">'
+    +'<div style="height:6px;background:var(--bg4);border-radius:3px;margin-bottom:12px;overflow:hidden"><div id="pw-bar" style="height:100%;border-radius:3px;transition:all .3s"><\/div><\/div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'
+    +'<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:4px">FORCE<\/div><div id="pw-force" style="font-size:18px;font-weight:700;font-family:var(--mono)">—<\/div><\/div>'
+    +'<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:4px">TEMPS CRACKAGE<\/div><div id="pw-time" style="font-size:13px;font-weight:700;font-family:var(--mono);margin-top:4px">—<\/div><\/div>'
+    +'<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:4px">LONGUEUR<\/div><div id="pw-len" style="font-size:18px;font-weight:700;font-family:var(--mono)">0<\/div><\/div>'
+    +'<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:4px">ENTROPIE (bits)<\/div><div id="pw-ent" style="font-size:18px;font-weight:700;font-family:var(--mono)">0<\/div><\/div>'
+    +'<\/div>'
+    +'<div id="pw-tips" style="font-size:13px;color:var(--muted);line-height:1.7">Tape un mot de passe pour analyser.<\/div><\/div>';
+}
+function checkPw(pw) {
+  const len=pw.length; document.getElementById('pw-len').textContent=len;
+  if(!len){['pw-force','pw-time','pw-ent'].forEach(id=>document.getElementById(id).textContent='—');document.getElementById('pw-bar').style.width='0';document.getElementById('pw-tips').textContent='Tape un mot de passe pour analyser.';return;}
+  let cs=0;if(/[a-z]/.test(pw))cs+=26;if(/[A-Z]/.test(pw))cs+=26;if(/[0-9]/.test(pw))cs+=10;if(/[^a-zA-Z0-9]/.test(pw))cs+=32;
+  const ent=Math.round(len*Math.log2(cs||1)); document.getElementById('pw-ent').textContent=ent;
+  const common=['azerty','password','123456','qwerty','azerty123','password123','admin','letmein'];
+  const isCommon=common.some(c=>pw.toLowerCase().includes(c));
+  let s=0;if(len>=8)s++;if(len>=12)s++;if(len>=16)s++;if(/[A-Z]/.test(pw))s++;if(/[0-9]/.test(pw))s++;if(/[^a-zA-Z0-9]/.test(pw))s++;if(isCommon)s=Math.max(0,s-3);
+  const lvls=[{l:'Très faible',c:'#ff4455',p:8,t:'Instantané'},{l:'Faible',c:'#ff7744',p:22,t:'Quelques secondes'},{l:'Moyen',c:'#ffaa00',p:45,t:'Quelques heures'},{l:'Fort',c:'#44cc88',p:72,t:'Plusieurs années'},{l:'Très fort',c:'#00ff88',p:100,t:'> 1 milliard d\'années'}];
+  const lv=lvls[s>5?4:s>3?3:s>2?2:s>1?1:0];
+  const fe=document.getElementById('pw-force');fe.textContent=lv.l;fe.style.color=lv.c;
+  document.getElementById('pw-time').textContent=lv.t;
+  const bar=document.getElementById('pw-bar');bar.style.width=lv.p+'%';bar.style.background=lv.c;
+  let tips=[];
+  if(len<12)tips.push('→ Allonge le mot de passe (12+ caractères)');
+  if(!/[A-Z]/.test(pw))tips.push('→ Ajoute des majuscules');
+  if(!/[0-9]/.test(pw))tips.push('→ Ajoute des chiffres');
+  if(!/[^a-zA-Z0-9]/.test(pw))tips.push('→ Ajoute des symboles');
+  if(isCommon)tips.push('⚠ Trop courant — dans les listes de hackers !');
+  if(s>=5)tips=['✓ Excellent ! Utilise Bitwarden pour stocker des mots de passe uniques.'];
+  document.getElementById('pw-tips').innerHTML=tips.join('<br>')||'✓ Très bon !';
+}
+
+// ══ CYBERHARCÈLEMENT ══
+function renderCyberCenter() {
+  cyberIdx=0; renderCyberScenario();
+}
+function renderCyberScenario() {
+  if (cyberIdx < 0) cyberIdx = 0;
+  if (cyberIdx >= CYBER_SCENARIOS.length) cyberIdx = CYBER_SCENARIOS.length - 1;
+  const s=CYBER_SCENARIOS[cyberIdx];
+  if (!s) return;
+  const c=document.getElementById('center');
+  const dots=CYBER_SCENARIOS.map((_,i)=>'<div class="pd '+(i<cyberIdx?'done':i===cyberIdx?'cur':'')+'" style="max-width:20px"><\/div>').join('');
+  c.innerHTML='<div class="card">'
+    +'<div class="pdots">'+dots+'<\/div>'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
+    +'<span style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:20px;border:1px solid var(--red);color:var(--red)">'+s.platform+'<\/span>'
+    +'<span style="font-size:15px;font-weight:700">'+s.title+'<\/span>'
+    +'<span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)">'+(cyberIdx+1)+'/'+CYBER_SCENARIOS.length+'<\/span><\/div>'
+    +'<div style="background:var(--bg3);padding:12px;border-radius:8px;border-left:3px solid var(--red);font-size:13px;margin-bottom:14px;line-height:1.6">'+s.context+'<\/div>'
+    +'<div style="background:var(--bg3);border-radius:8px;overflow:hidden;margin-bottom:14px">'
+    +(s.msgs||[]).map(m=>'<div style="padding:8px 12px;font-size:12px;border-bottom:1px solid var(--border);'+(m.d?'background:rgba(255,68,85,.06);':'')+'"><strong style="color:'+(m.d?'var(--red)':'var(--muted)')+'">'+m.s+'<\/strong> '+m.t+'<\/div>').join('')
+    +'<\/div>'
+    +'<div id="cyber-reveal" style="display:none">'
+    +'<div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:6px">CE QUE DIT LA LOI<\/div>'
+    +'<div style="font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.6">'+s.legal+'<\/div>'
+    +'<div style="font-size:13px;padding:8px;background:rgba(255,68,85,.07);border-radius:6px;border:1px solid rgba(255,68,85,.2);color:#ff9999;margin-bottom:12px">⚖️ '+s.sanctions+'<\/div>'
+    +'<div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:6px">QUE FAIRE<\/div>'
+    +(s.queFaire||[]).map(q=>'<div style="font-size:13px;display:flex;gap:8px;margin-bottom:4px"><span style="color:var(--green)">→<\/span>'+q+'<\/div>').join('')
+    +'<\/div>'
+    +'<div class="flex" style="margin-top:14px">'
+    +'<button class="btn bg" onclick="document.getElementById(\'cyber-reveal\').style.display=\'block\';this.style.display=\'none\'">Révéler les infos →<\/button>'
+    +'<button class="btn bo bsm" id="cyber-prev-btn" onclick="cyberIdx=Math.max(0,cyberIdx-1);renderCyberScenario()">← Préc<\/button>'
+    +'<button class="btn bg bsm" id="cyber-next-btn" onclick="cyberIdx=Math.min(CYBER_SCENARIOS.length-1,cyberIdx+1);renderCyberScenario()">Suiv →<\/button>'
+    +'<\/div><\/div>';
+}
+
+
+// ══ OSINT ══
+function renderOSINTCenter() {
+  osintRevealedIndices = 0;
+  osintSubmissions = {};
+  clearInterval(osintTimerInt);
+  const cas = OSINT_CASES[osintIdx];
+  const c = document.getElementById('center');
+  const dots = OSINT_CASES.map((_,i) => '<div class="pd '+(i<osintIdx?'done':i===osintIdx?'cur':'')+'" style="max-width:14px"><\/div>').join('');
+  c.innerHTML = '<div class="card">'
+    +'<div class="pdots">'+dots+'<\/div>'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">'
+    +'<span style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:20px;border:1px solid var(--purple);color:var(--purple)">OSINT<\/span>'
+    +'<span style="font-size:15px;font-weight:700">'+cas.title+'<\/span>'
+    +'<span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)">'+(osintIdx+1)+'/'+OSINT_CASES.length+'<\/span>'
+    +'<\/div>'
+    +'<div style="background:var(--bg3);border:2px dashed var(--border2);border-radius:10px;margin-bottom:14px;overflow:hidden;min-height:200px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;padding:10px">'
+    +'<img id="osint-img" src="'+(cas.localUrl||cas.filename)+'" style="max-width:100%;max-height:380px;border-radius:8px;display:block" />'
+    +'<div id="osint-placeholder" style="display:none;flex-direction:column;align-items:center;gap:10px;padding:20px;color:var(--muted);text-align:center">'
+    +'<div style="font-size:36px">🖼️<\/div>'
+    +'<div style="font-size:13px;font-family:var(--mono)">'+cas.filename+'<\/div>'
+    +'<div style="font-size:12px">Image non trouvée — place-la dans le même dossier<\/div>'
+    +'<label style="cursor:pointer;background:var(--green);color:#000;padding:8px 16px;border-radius:7px;font-size:13px;font-weight:700">'
+    +'Charger l\'image <input type="file" accept="image/*" style="display:none" onchange="loadOSINTImg(this)">'
+    +'<\/label>'
+    +'<\/div>'
+    +'<\/div>'
+    +'<div style="margin-bottom:12px">'
+    +'<div class="sl" style="margin-bottom:6px">Réponse — adresse / localisation<\/div>'
+    +'<input type="text" id="osint-ans" placeholder="Ex: 12 rue de la Paix, Moulins 03000" value="'+cas.answer+'" style="width:100%" onchange="OSINT_CASES[osintIdx].answer=this.value">'
+    +'<\/div>'
+    +'<div style="margin-bottom:12px">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+    +'<div class="sl">Indices<\/div>'
+    +'<button class="btn bg bsm" id="indice-btn" onclick="revealNextIndice()">💡 Révéler indice 1<\/button>'
+    +'<\/div>'
+    +'<div id="osint-indices-anim"><\/div>'
+    +'<\/div>'
+    +'<div style="margin-bottom:12px">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+    +'<div class="sl">Timer<\/div>'
+    +'<select id="osint-timer-sel" style="font-size:11px">'
+    +'<option value="60">1 min<\/option>'
+    +'<option value="120" selected>2 min<\/option>'
+    +'<option value="180">3 min<\/option>'
+    +'<option value="300">5 min<\/option>'
+    +'<\/select>'
+    +'<button class="btn bg bsm" onclick="startOSINTTimer()">▶ Démarrer<\/button>'
+    +'<span style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--green)" id="osint-timer-disp">—<\/span>'
+    +'<\/div>'
+    +'<div class="tbar"><div class="tfill" id="osint-tfill" style="width:100%;background:var(--green)"><\/div><\/div>'
+    +'<\/div>'
+    +'<div style="margin-bottom:12px">'
+    +'<div class="sl" style="margin-bottom:6px">Réponses joueurs (<span id="osint-sub-count">0<\/span>)<\/div>'
+    +'<div id="osint-subs" style="max-height:120px;overflow-y:auto"><div style="font-size:11px;color:var(--muted)">Aucune réponse<\/div><\/div>'
+    +'<\/div>'
+    +'<div id="osint-reveal-zone" style="display:none;padding:12px;background:rgba(0,255,136,.08);border:1px solid var(--green);border-radius:8px;margin-bottom:12px">'
+    +'<div style="font-size:14px;font-weight:700;color:var(--green)">✓ <span id="osint-reveal-txt"><\/span><\/div>'
+    +'<\/div>'
+    +'<div class="flex">'
+    +'<button class="btn bg" onclick="revealOSINTAnswer()">✓ Révéler la réponse<\/button>'
+    +'<button class="btn bo bsm" onclick="if(osintIdx>0){osintIdx--;renderOSINTCenter()}" '+(osintIdx===0?'disabled':'')+'>← Préc<\/button>'
+    +'<button class="btn bg bsm" onclick="if(osintIdx<OSINT_CASES.length-1){osintIdx++;renderOSINTCenter()}">Suiv →<\/button>'
+    +'<\/div><\/div>';
+
+  // Check image load
+  const img = document.getElementById('osint-img');
+  const ph = document.getElementById('osint-placeholder');
+  if (img) {
+    img.onerror = function() {
+      this.style.display='none';
+      if(ph){ph.style.display='flex';}
+    };
+    img.onload = function() {
+      if(ph){ph.style.display='none';}
+      this.style.display='block';
+    };
+    // If already errored (cached error)
+    if (img.complete && img.naturalHeight === 0) {
+      img.style.display='none';
+      if(ph) ph.style.display='flex';
+    }
+  }
+
+  pub('host:osint', {index:osintIdx, total:OSINT_CASES.length, title:cas.title, filename:cas.filename});
+}
+
+function loadOSINTImg(input) {
+  const file = input.files[0]; if(!file) return;
+  OSINT_CASES[osintIdx].localUrl = URL.createObjectURL(file);
+  renderOSINTCenter();
+}
+
+function revealNextIndice() {
+  const cas = OSINT_CASES[osintIdx];
+  if (osintRevealedIndices >= cas.indices.length) return;
+  const text = cas.indices[osintRevealedIndices];
+  osintRevealedIndices++;
+  const el = document.getElementById('osint-indices-anim');
+  if (el) {
+    const div = document.createElement('div');
+    div.style.cssText='display:flex;gap:8px;padding:7px 10px;background:var(--bg3);border-radius:6px;margin-bottom:5px;font-size:12px';
+    div.innerHTML='<span style="color:var(--amber);font-family:var(--mono);flex-shrink:0">'+osintRevealedIndices+'.<\/span><span>'+text+'<\/span>';
+    el.appendChild(div);
+  }
+  const btn = document.getElementById('indice-btn');
+  if (btn) {
+    if (osintRevealedIndices >= cas.indices.length) { btn.textContent='✓ Tous les indices révélés'; btn.disabled=true; }
+    else btn.textContent='💡 Révéler indice '+(osintRevealedIndices+1);
+  }
+  pub('host:osint_indice', {index:osintIdx, indiceIdx:osintRevealedIndices-1, text});
+}
+
+function startOSINTTimer() {
+  clearInterval(osintTimerInt);
+  const dur = parseInt(document.getElementById('osint-timer-sel').value)||120;
+  osintTimeLeft = dur;
+  const total = dur;
+  pub('host:osint_timer', {duration:dur});
+  osintTimerInt = setInterval(()=>{
+    osintTimeLeft = Math.max(0, osintTimeLeft-1);
+    const pct = osintTimeLeft/total*100;
+    const col = pct>50?'var(--green)':pct>25?'var(--amber)':'var(--red)';
+    const mins = Math.floor(osintTimeLeft/60), secs = osintTimeLeft%60;
+    const d=document.getElementById('osint-timer-disp'), f=document.getElementById('osint-tfill');
+    if(d){d.textContent=mins+':'+String(secs).padStart(2,'0');d.style.color=col;}
+    if(f){f.style.width=pct+'%';f.style.background=col;}
+    pub('host:tick',{timeLeft:osintTimeLeft,mod:'osint'});
+    if(osintTimeLeft<=0) clearInterval(osintTimerInt);
+  },1000);
+}
+
+function revealOSINTAnswer() {
+  clearInterval(osintTimerInt);
+  const ans = document.getElementById('osint-ans')?document.getElementById('osint-ans').value:OSINT_CASES[osintIdx].answer;
+  OSINT_CASES[osintIdx].answer = ans;
+  const zone=document.getElementById('osint-reveal-zone'), txt=document.getElementById('osint-reveal-txt');
+  if(zone) zone.style.display='block';
+  if(txt) txt.textContent = ans||'(non renseignée)';
+  pub('host:osint_reveal',{answer:ans, index:osintIdx});
+}
+
+function updateOSINTSubmissions() {
+  const subs = Object.values(osintSubmissions);
+  const el=document.getElementById('osint-subs'), cnt=document.getElementById('osint-sub-count');
+  if(cnt) cnt.textContent=subs.length;
+  if(el) el.innerHTML=subs.map(s=>'<div style="display:flex;gap:8px;padding:5px 8px;background:var(--bg3);border-radius:5px;margin-bottom:4px;font-size:12px"><div style="font-weight:700;color:'+(s.teamColor||'var(--green)')+'">'+s.team+'<\/div><div style="flex:1">'+s.text+'<\/div><\/div>').join('')||'<div style="font-size:11px;color:var(--muted)">Aucune réponse<\/div>';
+}
+
+
+// ── TOAST ──
+function toast(msg) {
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ── INIT ──
+window.addEventListener('load', function(){ if(typeof Ably!=='undefined'){initAbly();}else{var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/ably/ably.min.js';s.onload=initAbly;document.head.appendChild(s);}});
+</script>
+</body>
+</html>
