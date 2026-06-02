@@ -383,7 +383,28 @@ function subscribeAll() {
 
   channel.subscribe('host:reveal', msg => {
     if (msg.data.mod==='phishing') {
-      showWaiting((msg.data.isPhish ? '⚠ C\'était du phishing !' : '✓ Mail légitime') + '\n\n' + msg.data.expl);
+      // Mettre à jour le score
+      let pts = 0;
+      if (msg.data.scores && msg.data.scores[pid]) {
+        pts = msg.data.scores[pid].score - myScore;
+        myScore = msg.data.scores[pid].score;
+        myCorrect = msg.data.scores[pid].correct;
+      } else if (msg.data.teamScores && myTeam && msg.data.teamScores[myTeam]) {
+        pts = msg.data.teamScores[myTeam].score - myScore;
+        myScore = msg.data.teamScores[myTeam].score;
+      }
+      const wasRight = phishVoted === msg.data.isPhish;
+      document.getElementById('r-icon').textContent = wasRight ? '✅' : '❌';
+      document.getElementById('r-title').textContent = wasRight ? 'Bonne analyse !' : 'Raté !';
+      document.getElementById('r-pts').textContent = pts > 0 ? '+'+pts : '+0';
+      document.getElementById('r-pts').style.color = pts > 0 ? 'var(--green)' : 'var(--red)';
+      document.getElementById('r-total').textContent = 'Total : '+myScore+' pts · '+myCorrect+' ✓';
+      const a = document.getElementById('r-ans');
+      a.textContent = msg.data.isPhish ? '⚠ C\'était du phishing !' : '✓ Mail légitime';
+      a.style.cssText = 'background:rgba(0,255,136,.08);border:1px solid var(--green);color:var(--green);padding:11px 18px;border-radius:9px;font-size:14px;font-weight:600;margin:14px 0;max-width:300px;width:100%';
+      document.getElementById('r-total').textContent += '  ' + msg.data.expl.substr(0,60)+'...';
+      updateSbar();
+      showScreen('result');
       return;
     }
     if (msg.data.mod!=='quiz') return;
@@ -460,6 +481,26 @@ function subscribeAll() {
     updateSbar();
   });
   channel.subscribe('host:empreinte_end', () => showWaiting('Empreinte terminée !'));
+  channel.subscribe('host:empreinte_scores', msg => {
+    let pts = 0;
+    if (msg.data.scores && msg.data.scores[pid]) {
+      pts = msg.data.scores[pid].score - myScore;
+      myScore = msg.data.scores[pid].score;
+      myCorrect = msg.data.scores[pid].correct;
+    } else if (msg.data.teamScores && myTeam && msg.data.teamScores[myTeam]) {
+      pts = msg.data.teamScores[myTeam].score - myScore;
+      myScore = msg.data.teamScores[myTeam].score;
+    }
+    document.getElementById('r-icon').textContent = '👣';
+    document.getElementById('r-title').textContent = 'Empreinte terminée !';
+    document.getElementById('r-pts').textContent = pts > 0 ? '+'+pts : '+0';
+    document.getElementById('r-pts').style.color = 'var(--green)';
+    document.getElementById('r-total').textContent = 'Total : '+myScore+' pts';
+    document.getElementById('r-ans').textContent = 'Score empreinte calculé !';
+    document.getElementById('r-ans').style.cssText = 'background:rgba(0,255,136,.08);border:1px solid var(--green);color:var(--green);padding:11px 18px;border-radius:9px;font-size:14px;font-weight:600;margin:14px 0;max-width:300px;width:100%';
+    updateSbar();
+    showScreen('result');
+  });
 
   // CTF
   channel.subscribe('host:ctf', msg => {
