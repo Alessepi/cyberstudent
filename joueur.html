@@ -322,6 +322,7 @@ function joinRoom() {
   ably.connection.on('connected', () => {
     channel = ably.channels.get('cyberconf-'+code);
     subscribeAll();
+    console.log('[JOUEUR] connexion room:', code, 'pid:', pid, 'team:', myTeam);
     channel.publish('player:join', {id:pid, name, team:myTeam});
     const t = teams.find(x=>x.name===myTeam);
     document.getElementById('lob-name').textContent = name;
@@ -352,6 +353,11 @@ function subscribeAll() {
   });
 
   // QUIZ
+  // Debug: log all incoming messages
+  channel.subscribe(msg => {
+    console.log('[JOUEUR] recu:', msg.name, msg.data ? JSON.stringify(msg.data).substr(0,100) : '');
+  });
+
   channel.subscribe('host:question', msg => {
     if (msg.data.mod!=='quiz') return;
     const {question, timerDuration, index, total} = msg.data;
@@ -574,6 +580,7 @@ function submitQuiz(i) {
     if (j===i) b.classList.add('sel');
     else b.style.opacity='.35';
   });
+  console.log('[JOUEUR] envoi answer:', i, 'room:', room, 'pid:', pid);
   channel.publish('player:answer',{id:pid,answer:i,timeRemaining:timeLeft,mod:'quiz'});
 }
 function startClientTimer() {
