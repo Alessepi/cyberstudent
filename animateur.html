@@ -681,7 +681,15 @@ function updateRight() {
   if (!list.length) { pl.innerHTML='<div style="font-size:11px;color:var(--muted)">En attente...<\/div>'; }
   else pl.innerHTML = list.map(p=>{const t=p.team?teamDefs.find(x=>x.name===p.team):null;return '<div class="prow"><div class="pdot" style="background:'+(p.answered?'var(--green)':'var(--muted)')+'"><\/div><div style="font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+p.name+'<\/div>'+(t?'<div style="font-size:10px;font-family:var(--mono);color:'+t.color+'">'+t.name+'<\/div>':'')+'<div style="font-family:var(--mono);font-size:11px;font-weight:700;color:'+(t?t.color:'var(--green)')+'">'+p.score+'<\/div><\/div>';}).join('');
   const sb = document.getElementById('indiv-sb');
-  const sorted = [...list].sort((a,b)=>b.score-a.score).slice(0,10);
+  // Group by team, sum scores
+  const teamTotals = {};
+  list.forEach(p => {
+    if (!p.team) return;
+    if (!teamTotals[p.team]) { const t=teamDefs.find(x=>x.name===p.team); teamTotals[p.team]={name:p.team,score:0,correct:0,color:t?t.color:'var(--green)'}; }
+    teamTotals[p.team].score += p.score;
+    teamTotals[p.team].correct += p.correct;
+  });
+  const sorted = Object.values(teamTotals).sort((a,b)=>b.score-a.score);
   if (!sorted.length) { sb.innerHTML='<div style="font-size:11px;color:var(--muted)">Aucun score<\/div>'; return; }
   const r=['🥇','🥈','🥉'];
   sb.innerHTML = sorted.map((p,i)=>{const t=p.team?teamDefs.find(x=>x.name===p.team):null;return '<div class="srow"><div class="sr-rank">'+(r[i]||'#'+(i+1))+'<\/div><div class="sr-name" style="'+(t?'color:'+t.color:'')+'">'+p.name+'<\/div><div class="sr-pts" style="'+(t?'color:'+t.color:'')+'">'+p.score+'<\/div><\/div>';}).join('');
@@ -802,7 +810,15 @@ function startTimer() {
 function revealQuiz() {
   if(quizPhase!=='question') return;
   clearInterval(timerInterval); quizPhase='reveal';
-  pub('host:reveal',{correct:currentQ.correct,correctText:currentQ.opts[currentQ.correct],expl:currentQ.expl,mod:'quiz',scores:Object.fromEntries(Object.entries(players).map(([id,p])=>[id,{score:p.score,correct:p.correct}]))});
+  const teamScores = {};
+  teamDefs.forEach(t => {
+    const m = Object.values(players).filter(p=>p.team===t.name);
+    teamScores[t.name] = { score: m.reduce((s,p)=>s+p.score,0), color: t.color };
+  });
+  pub('host:reveal',{correct:currentQ.correct,correctText:currentQ.opts[currentQ.correct],expl:currentQ.expl,mod:'quiz',
+    scores:Object.fromEntries(Object.entries(players).map(([id,p])=>[id,{score:p.score,correct:p.correct}])),
+    teamScores
+  });
   renderQuizCenter(); updateRight();
 }
 function showPodium() {

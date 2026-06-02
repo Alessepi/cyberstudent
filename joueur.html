@@ -384,10 +384,16 @@ function subscribeAll() {
     clearInterval(timerInt);
     const {correct, correctText, expl, scores} = msg.data;
     const wasCorrect = answered && myAns===correct;
+    // Try individual score first, then team score
     if (scores&&scores[pid]) {
       const pts = scores[pid].score - myScore;
       myScore = scores[pid].score; myCorrect = scores[pid].correct;
       showResult(wasCorrect, correct, correctText, pts, expl);
+    } else if (msg.data.teamScores && myTeam && msg.data.teamScores[myTeam]) {
+      const ts = msg.data.teamScores[myTeam];
+      const pts = ts.score - myScore;
+      myScore = ts.score;
+      showResult(wasCorrect, correct, correctText, Math.max(0,pts), expl);
     } else {
       showResult(wasCorrect, correct, correctText, 0, expl);
     }
