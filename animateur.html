@@ -559,6 +559,14 @@ function initAbly() {
   });
   channel = ably.channels.get('cyberconf-' + ROOM);
 
+  // Debug
+  channel.subscribe(msg => {
+    if (msg.name === 'player:answer') {
+      console.log('[ANIMATEUR] recu answer:', JSON.stringify(msg.data).substr(0,200));
+      console.log('[ANIMATEUR] players:', Object.keys(players).length, 'ids:', Object.keys(players).join(','));
+    }
+  });
+
   channel.subscribe('player:join', msg => {
     const {id, name, team} = msg.data;
     players[id] = {name, team:team||null, score:0, correct:0, answered:false};
@@ -584,6 +592,7 @@ function initAbly() {
       if (currentQ && answer === currentQ.correct) {
         const pts = Math.max(50, Math.round(500 * (timeRemaining / timerDur)));
         players[id].score += pts; players[id].correct++;
+        console.log('[ANIMATEUR] score update:', id, 'pts:', pts, 'total:', players[id].score);
       }
       updateLiveQuiz();
     } else if (mod === 'phishing') {
